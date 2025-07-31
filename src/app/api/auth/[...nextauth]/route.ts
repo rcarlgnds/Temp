@@ -2,9 +2,9 @@ import NextAuth, { AuthOptions } from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
 import CredentialsProvider from "next-auth/providers/credentials";
 
-const azureADClientId = process.env.AZURE_AD_CLIENT_ID;
-const azureADClientSecret = process.env.AZURE_AD_CLIENT_SECRET;
-const azureADTenantId = process.env.AZURE_AD_TENANT_ID;
+const azureADClientId = process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID;
+const azureADClientSecret = process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_SECRET;
+const azureADTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
 
 if (!azureADClientId || !azureADClientSecret || !azureADTenantId) {
     throw new Error("Missing Azure AD environment variables. Check your .env file.");
