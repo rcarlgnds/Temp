@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import AzureADProvider from 'next-auth/providers/azure-ad';
+import CredentialsProvider from "next-auth/providers/credentials";
 
 const env = process.env;
 
@@ -47,6 +48,37 @@ async function refreshAccessToken(token) {
 
 export const authOptions = {
   providers: [
+     CredentialsProvider({
+  name: 'Credentials',
+  credentials: {
+    email: { label: 'Email', type: 'text' },
+    password: { label: 'Password', type: 'password' },
+  },
+  async authorize(credentials) {
+    const res = await fetch("http://localhost:6969/api/users/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: credentials?.email,
+        password: credentials?.password,
+      }),
+    });
+
+    if (!res.ok) return null;
+
+    const user = await res.json();
+
+    if (user) {
+      return {
+        id: user.playerId,
+        name: user.username,
+        email: user.email,
+      };
+    }
+    return null;
+  },
+}),
+
     AzureADProvider({
       clientId: `${env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID}`,
       clientSecret: `${env.NEXT_PUBLIC_AZURE_AD_CLIENT_SECRET}`,
@@ -58,6 +90,26 @@ export const authOptions = {
     }),
   ],
   callbacks: {
+
+     async signIn({ user }) {
+    try {
+      await fetch("http://localhost:6969/api/users/add-player", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          Username: user.name?.toLowerCase(),
+          Email: user.email,
+        }),
+      });
+    } catch (error) {
+      console.error("Error registering user during signIn:", error);
+    }
+
+    return true; 
+  },
+  
     async jwt({ token, user, account }) {
       if (account && user) {
         return {
