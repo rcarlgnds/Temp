@@ -1,15 +1,29 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
 
-body {
-    margin: 0;
-    background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-    url('https://images.unsplash.com/photo-1579251036612-763428d54cde?q=80&w=1974&auto=format&fit=crop');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    min-height: 100vh;
-}
-
 .medieval-title {
     font-family: 'Cinzel', serif;
+}
+
+*,
+*::before,
+*::after {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+@keyframes shine {
+    0% {
+        background-position: 200% center;
+    }
+    100% {
+        background-position: -200% center;
+    }
+}
+
+.title-shimmer {
+    background: linear-gradient(to right, #ffffff 20%, #ffd700 50%, #ffffff 80%);
+    background-size: 200% auto;
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text; /* Untuk kompatibilitas browser */
+    animation: shine 3s linear infinite;
 }
