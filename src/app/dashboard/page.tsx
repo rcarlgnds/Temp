@@ -10,13 +10,14 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus, IconLogin } from '@tabler/icons-react';
-import { getAllRooms, createRoom, Room } from '@/services/room';
+import { getAllRooms, createRoom } from '@/services/room';
 import { createPlayerSession } from '@/services/player';
 import { InteractiveBackground } from "@/components/dashboard/InteractiveBackground";
 import { AppHeader } from '@/components/dashboard/AppHeader';
 import { RoomCard } from '@/components/dashboard/RoomCard';
 import { LobbyView } from '@/components/dashboard/LobbyView';
-import { ApiPlayer } from '@/services/types';
+import {Room} from "@/services/room/types";
+import {ApiPlayer} from "@/services/player/types";
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
