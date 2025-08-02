@@ -1,5 +1,11 @@
 import axios from 'axios';
-import { CreatePlayerSessionPayload, PlayerSession, LoginPlayerPayload, ApiPlayer } from './types';
+import {
+    CreatePlayerSessionPayload,
+    PlayerSession,
+    LoginPlayerPayload,
+    ApiPlayer,
+    UpdatePlayerStatusPayload
+} from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/playerSession`;
 
@@ -20,5 +26,16 @@ export const loginPlayer = async (payload: LoginPlayerPayload): Promise<{ player
     } catch (error) {
         console.error("Failed to get player list via login:", error);
         throw new Error("Could not get player list.");
+    }
+};
+
+export const updatePlayerStatus = async (payload: UpdatePlayerStatusPayload): Promise<any> => {
+    const PLAYER_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/players`;
+    try {
+        const response = await axios.post(`${PLAYER_API_URL}/update-status`, payload);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to update player status:", error);
+        throw new Error("Could not update player status.");
     }
 };

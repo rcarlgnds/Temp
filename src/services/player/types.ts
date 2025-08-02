@@ -13,6 +13,12 @@ export interface CreatePlayerSessionPayload {
     RoomId: string;
 }
 
+export interface UpdatePlayerStatusPayload {
+    PlayerId: string;
+    RoomId: string;
+    Status: 'Ready' | 'Not Ready';
+}
+
 export interface PlayerSession {
     id: string;
     playerSessionId: string;

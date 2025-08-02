@@ -3,7 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { Card, Stack, Box, Group, Text, Badge, Button, useMantineColorScheme, Tooltip } from '@mantine/core';
 import { IconUsers, IconClipboardCopy, IconCheck } from '@tabler/icons-react';
-import { Room } from '@/services/types';
+import {Room} from "@/services/room/types";
 
 interface RoomCardProps {
     room: Room;

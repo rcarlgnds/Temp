@@ -11,9 +11,10 @@ interface LobbyViewProps {
     room: Room | null;
     onBack: () => void;
     onJoinGame: (roomId: string) => Promise<void>;
+    isJoining: boolean;
 }
 
-export function LobbyView({ room, onBack, onJoinGame }: LobbyViewProps) {
+export function LobbyView({ room, onBack, onJoinGame, isJoining }: LobbyViewProps) {
     const { data: session } = useSession();
     const [copied, setCopied] = useState(false);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
@@ -76,6 +77,7 @@ export function LobbyView({ room, onBack, onJoinGame }: LobbyViewProps) {
                                 size="md"
                                 w={200}
                                 onClick={() => onJoinGame(room.id)}
+                                loading={isJoining}
                             >
                                 Join Game
                             </Button>

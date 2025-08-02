@@ -10,14 +10,13 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus, IconLogin } from '@tabler/icons-react';
-import { getAllRooms, createRoom } from '@/services/room';
+import { getAllRooms, createRoom, addPlayerToRoom } from '@/services/room';
 import { createPlayerSession } from '@/services/player';
 import { InteractiveBackground } from "@/components/dashboard/InteractiveBackground";
 import { AppHeader } from '@/components/dashboard/AppHeader';
 import { RoomCard } from '@/components/dashboard/RoomCard';
 import { LobbyView } from '@/components/dashboard/LobbyView';
 import {Room} from "@/services/room/types";
-import {ApiPlayer} from "@/services/player/types";
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
@@ -30,6 +29,7 @@ export default function DashboardPage() {
 
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loadingRooms, setLoadingRooms] = useState(true);
+    const [isJoining, setIsJoining] = useState(false);
 
     const fetchAllRooms = async () => {
         try {
@@ -58,30 +58,19 @@ export default function DashboardPage() {
     };
 
     const handleJoinGameInLobby = async (roomId: string) => {
-        if (!session?.user?.id || !selectedRoom) {
-            console.error("User or Room not found.");
+        if (!session?.user?.id || !session?.user?.email) {
+            console.error("User session data is not available.");
             return;
         }
 
-        const optimisticPlayer: ApiPlayer = {
-            id: session.user.id,
-            username: session.user.name || 'New Player',
-            email: session.user.email || '',
-            status: 'Not Ready',
-            skin: 'Knight',
-            money: 1500,
-        };
-
-        const optimisticRoom = {
-            ...selectedRoom,
-            players: [...selectedRoom.players, optimisticPlayer],
-            playersCount: selectedRoom.players.length + 1,
-        };
-        setSelectedRoom(optimisticRoom);
+        setIsJoining(true);
 
         try {
-            const payload = { UserId: session.user.id, RoomId: roomId };
-            await createPlayerSession(payload);
+            const sessionPayload = { UserId: session.user.id, RoomId: roomId };
+            await createPlayerSession(sessionPayload);
+
+            const addPlayerPayload = { RoomId: roomId, Email: session.user.email };
+            await addPlayerToRoom(addPlayerPayload);
 
             const updatedRooms = await getAllRooms();
             setRooms(updatedRooms);
@@ -89,11 +78,13 @@ export default function DashboardPage() {
             const newlyJoinedRoom = updatedRooms.find(r => r.id === roomId);
             if (newlyJoinedRoom) {
                 setSelectedRoom(newlyJoinedRoom);
+            } else {
+                handleBackToDashboard();
             }
-
         } catch (error) {
             console.error("Failed to join game:", error);
-            setSelectedRoom(selectedRoom);
+        } finally {
+            setIsJoining(false);
         }
     };
 
@@ -178,6 +169,7 @@ export default function DashboardPage() {
                             room={selectedRoom}
                             onBack={handleBackToDashboard}
                             onJoinGame={handleJoinGameInLobby}
+                            isJoining={isJoining}
                         />
                     )}
                 </AppShell.Main>
