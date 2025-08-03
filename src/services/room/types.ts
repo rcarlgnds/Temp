@@ -2,6 +2,7 @@ import { ApiPlayer } from '../player/types';
 
 export interface CreateRoomPayload {
     Room: {
+        RoomId: string;
         HostId: string;
         TopicId: string;
     };

@@ -6,17 +6,20 @@ import Link from 'next/link';
 import {
     AppShell, Title, Button, Group, SimpleGrid,
     Container, useMantineColorScheme, Modal, Stack,
-    TextInput, NumberInput, Text, Center, Loader
+    Text, Center, Loader
 } from '@mantine/core';
 import { useDisclosure } from "@mantine/hooks";
-import { IconPlus, IconLogin } from '@tabler/icons-react';
-import { getAllRooms, createRoom, addPlayerToRoom } from '@/services/room';
+import { IconPlus, IconLogin, IconTrash } from '@tabler/icons-react';
+import {
+    getAllRooms, createRoom, addPlayerToRoom,
+    removePlayerFromRoom, updateRoomStatus
+} from '@/services/room';
 import { createPlayerSession } from '@/services/player';
 import { InteractiveBackground } from "@/components/dashboard/InteractiveBackground";
 import { AppHeader } from '@/components/dashboard/AppHeader';
 import { RoomCard } from '@/components/dashboard/RoomCard';
 import { LobbyView } from '@/components/dashboard/LobbyView';
-import {Room} from "@/services/room/types";
+import { Room } from "@/services/room/types";
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
@@ -27,9 +30,14 @@ export default function DashboardPage() {
     const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false);
     const [joinOpened, { open: openJoin, close: closeJoin }] = useDisclosure(false);
 
+    const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
+    const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
+
+
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loadingRooms, setLoadingRooms] = useState(true);
     const [isJoining, setIsJoining] = useState(false);
+    const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
     const fetchAllRooms = async () => {
         try {
@@ -49,6 +57,55 @@ export default function DashboardPage() {
         }
     }, [status]);
 
+    const handleCreateRoom = async () => {
+        if (!session?.user?.id || !session?.user?.email || !session.user.name) {
+            console.error("User session data is missing");
+            return;
+        }
+        setIsCreatingRoom(true);
+        const newRoomName = `${session.user.name}'s Room`;
+        const payload = {
+            Room: {
+                RoomId: newRoomName,
+                HostId: session.user.id,
+                TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b",
+            },
+            Email: session.user.email
+        };
+        try {
+            const newRoom = await createRoom(payload);
+            await createPlayerSession({ UserId: session.user.id, RoomId: newRoom.id });
+            await addPlayerToRoom({ RoomId: newRoom.id, Email: session.user.email });
+            closeCreate();
+            const updatedRooms = await getAllRooms();
+            setRooms(updatedRooms);
+            const createdRoom = updatedRooms.find(room => room.id === newRoom.id);
+            if (createdRoom) {
+                setSelectedRoom(createdRoom);
+                setActiveView('lobby');
+            }
+        } catch (error) {
+            console.error("Error during room creation and join process:", error);
+        } finally {
+            setIsCreatingRoom(false);
+        }
+    };
+
+    const handleStartGame = async (roomId: string) => {
+        try {
+            await updateRoomStatus({ RoomId: roomId, Status: 'start' });
+            console.log(`Game in room ${roomId} has been started!`);
+            const updatedRooms = await getAllRooms();
+            setRooms(updatedRooms);
+            const startedRoom = updatedRooms.find(r => r.id === roomId);
+            if (startedRoom) {
+                setSelectedRoom(startedRoom);
+            }
+        } catch (error) {
+            console.error("Failed to start game:", error);
+        }
+    };
+
     const handleViewRoom = (roomId: string) => {
         const roomToView = rooms.find(room => room.id === roomId);
         if (roomToView) {
@@ -62,19 +119,12 @@ export default function DashboardPage() {
             console.error("User session data is not available.");
             return;
         }
-
         setIsJoining(true);
-
         try {
-            const sessionPayload = { UserId: session.user.id, RoomId: roomId };
-            await createPlayerSession(sessionPayload);
-
-            const addPlayerPayload = { RoomId: roomId, Email: session.user.email };
-            await addPlayerToRoom(addPlayerPayload);
-
+            await createPlayerSession({ UserId: session.user.id, RoomId: roomId });
+            await addPlayerToRoom({ RoomId: roomId, Email: session.user.email });
             const updatedRooms = await getAllRooms();
             setRooms(updatedRooms);
-
             const newlyJoinedRoom = updatedRooms.find(r => r.id === roomId);
             if (newlyJoinedRoom) {
                 setSelectedRoom(newlyJoinedRoom);
@@ -88,43 +138,50 @@ export default function DashboardPage() {
         }
     };
 
+    const handleLeaveRoom = async (roomId: string) => {
+        if (!session?.user?.email) {
+            console.error("User email is not available.");
+            return;
+        }
+        try {
+            await removePlayerFromRoom({ RoomId: roomId, Email: session.user.email });
+            handleBackToDashboard();
+            await fetchAllRooms();
+        } catch (error) {
+            console.error("Failed to leave room:", error);
+        }
+    };
+
+    const handleDeleteRoom = (roomId: string) => {
+        setRoomToDelete(roomId);
+        openDeleteModal();
+    };
+
+    const confirmDeleteRoom = () => {
+        if (!roomToDelete) return;
+
+        console.log(`--- PLACEHOLDER ---`);
+        console.log(`API Call to delete room with ID: ${roomToDelete}`);
+        console.log(`-------------------`);
+
+        setRooms(currentRooms => currentRooms.filter(room => room.id !== roomToDelete));
+        setRoomToDelete(null);
+        closeDeleteModal();
+    };
+
     const handleBackToDashboard = () => {
         setSelectedRoom(null);
         setActiveView('dashboard');
     };
 
-    const handleCreateRoom = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!session?.user?.id || !session?.user?.email) {
-            console.error("User ID or Email not found in session");
-            return;
-        }
-
-        const payload = {
-            Room: { HostId: session.user.id, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
-            Email: session.user.email
-        };
-
-        try {
-            await createRoom(payload);
-            closeCreate();
-            await fetchAllRooms();
-        } catch (error) {
-            console.error("Error in handleCreateRoom:", error);
-        }
-    };
-
     if (status !== "authenticated") {
         return (
-            <>
-                <InteractiveBackground colorScheme={colorScheme} />
-                <Container style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', zIndex: 1 }}>
-                    <Title c="white" ta="center">Akses Ditolak</Title>
-                    <Button component={Link} href="/" mt="xl" size="lg" variant="gradient" gradient={{from: 'cyan', to: 'blue'}}>
-                        Ke Halaman Login
-                    </Button>
-                </Container>
-            </>
+            <Container style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', zIndex: 1 }}>
+                <Title c="white" ta="center">Akses Ditolak</Title>
+                <Button component={Link} href="/" mt="xl" size="lg" variant="gradient" gradient={{from: 'cyan', to: 'blue'}}>
+                    Ke Halaman Login
+                </Button>
+            </Container>
         );
     }
 
@@ -133,13 +190,29 @@ export default function DashboardPage() {
             <InteractiveBackground colorScheme={colorScheme} />
 
             <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create a New Room</Text>} radius="lg" centered>
-                <form onSubmit={handleCreateRoom}>
-                    <Stack>
-                        <TextInput label="Room Name" placeholder="e.g., The King's Table" required radius="md" name="roomName"/>
-                        <NumberInput label="Max Players" defaultValue={4} min={2} max={4} radius="md" name="maxPlayers"/>
-                        <Button type="submit" fullWidth mt="md" radius="md" variant="gradient" gradient={{ from: '#DAA520', to: '#3C2A21' }}>Create Room</Button>
-                    </Stack>
-                </form>
+                <Stack>
+                    <Text mt="md">A new room will be created with your name. Are you sure?</Text>
+                    <Button
+                        fullWidth mt="md" radius="md" variant="gradient"
+                        gradient={{ from: '#DAA520', to: '#3C2A21' }}
+                        loading={isCreatingRoom} onClick={handleCreateRoom}
+                    >
+                        Confirm & Create
+                    </Button>
+                </Stack>
+            </Modal>
+
+            {/* Modal baru untuk Delete Room */}
+            <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title={<Text fw={700}>Confirm Deletion</Text>} radius="lg" centered>
+                <Stack>
+                    <Text mt="md">Are you sure you want to delete room "{roomToDelete}"? This action cannot be undone.</Text>
+                    <Group justify="flex-end" mt="md">
+                        <Button variant="default" onClick={closeDeleteModal}>Cancel</Button>
+                        <Button color="red" leftSection={<IconTrash size={16}/>} onClick={confirmDeleteRoom}>
+                            Delete Room
+                        </Button>
+                    </Group>
+                </Stack>
             </Modal>
 
             <AppShell header={{ height: 70 }} padding="md" styles={{ main: { backgroundColor: 'transparent', position: 'relative', zIndex: 1 } }}>
@@ -159,7 +232,12 @@ export default function DashboardPage() {
                             ) : (
                                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xl">
                                     {rooms.map((room) => (
-                                        <RoomCard key={room.id} room={room} onJoin={handleViewRoom} />
+                                        <RoomCard
+                                            key={room.id}
+                                            room={room}
+                                            onJoin={handleViewRoom}
+                                            onDelete={handleDeleteRoom}
+                                        />
                                     ))}
                                 </SimpleGrid>
                             )}
@@ -169,6 +247,8 @@ export default function DashboardPage() {
                             room={selectedRoom}
                             onBack={handleBackToDashboard}
                             onJoinGame={handleJoinGameInLobby}
+                            onLeaveRoom={handleLeaveRoom}
+                            onStartGame={handleStartGame}
                             isJoining={isJoining}
                         />
                     )}

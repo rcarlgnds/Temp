@@ -1,9 +1,28 @@
 "use client";
 
-import React from 'react';
-import { Paper, Stack, Avatar, Text, Badge, Box, MantineTheme } from "@mantine/core";
-import { IconUser, IconPlus, IconCheck, IconX, IconCrown } from '@tabler/icons-react';
-import {ApiPlayer} from "@/services/player/types";
+import React, { useState } from 'react';
+import { Paper, Stack, Avatar, Text, Badge, Box, MantineTheme, useMantineColorScheme } from "@mantine/core";
+import {
+    IconUser, IconShield, IconAxe, IconWand,
+    IconMask, IconSword, IconCrown
+} from '@tabler/icons-react';
+import { ApiPlayer } from "@/services/player/types";
+
+const skinIcons: { [key: string]: React.ElementType } = {
+    "Knight": IconShield,
+    "Barbarian": IconAxe,
+    "Mage": IconWand,
+    "Rogue": IconMask,
+    "Assassin": IconSword,
+};
+
+const skinColors: { [key: string]: string } = {
+    "Knight": "red",
+    "Barbarian": "blue",
+    "Mage": "grape",
+    "Rogue": "orange",
+    "Assassin": "green",
+};
 
 interface PlayerSlotProps {
     player: ApiPlayer | null;
@@ -11,56 +30,71 @@ interface PlayerSlotProps {
 }
 
 export function PlayerSlot({ player, isHost }: PlayerSlotProps) {
+    const { colorScheme } = useMantineColorScheme();
+    const [isHovered, setIsHovered] = useState(false);
+
     if (!player) {
         return (
-            <Stack
-                align="center" justify="center" h="100%" gap="sm"
-                style={(theme: MantineTheme) => ({
-                    backgroundColor: 'rgba(26, 27, 30, 0.3)',
-                    borderRadius: theme.radius.md,
-                    border: `1px solid ${theme.colors.dark[5]}`,
-                    minHeight: 220,
-                })}
-            >
-                <Avatar size={80} radius="xl" color="dark.4">
-                    <IconUser />
-                </Avatar>
+            <Stack align="center" justify="center" h="100%" gap="sm" style={(theme: MantineTheme) => ({
+                backgroundColor: 'rgba(26, 27, 30, 0.3)',
+                borderRadius: theme.radius.md,
+                border: `1px dashed ${theme.colors.dark[4]}`,
+                minHeight: 220,
+            })}>
+                <Avatar size={80} radius="xl" color="dark.4"><IconUser /></Avatar>
                 <Text fz="lg" fw={700} c="dark.3">SLOT OPEN</Text>
             </Stack>
         );
     }
 
-    const isReady = player.status === 'Ready';
+    const PlayerIcon = skinIcons[player.skin] || IconUser;
+    const playerColor = skinColors[player.skin] || 'gray';
+
+    const paperStyle = (theme: MantineTheme): React.CSSProperties => ({
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        height: '100%',
+        minHeight: 220,
+        backgroundColor: colorScheme === 'dark' ? 'rgba(37, 38, 43, 0.5)' : 'rgba(230, 230, 230, 0.5)',
+        borderRadius: theme.radius.md,
+        border: `1px solid ${theme.colors.dark[4]}`,
+        cursor: 'pointer',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+        transform: isHovered ? 'translateY(-5px) scale(1.03)' : 'none',
+        boxShadow: isHovered ? `0 10px 25px ${theme.colors[playerColor][8]}40` : 'none',
+    });
 
     return (
         <Paper
             p="md"
-            style={(theme: MantineTheme) => ({
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-around',
-                height: '100%', minHeight: 220,
-                backgroundColor: isReady ? 'rgba(8, 127, 91, 0.5)' : 'rgba(37, 38, 43, 0.5)',
-                borderRadius: theme.radius.md,
-                border: `1px solid ${isReady ? 'rgba(18, 184, 134, 0.8)' : 'rgba(55, 58, 64, 0.8)'}`,
-                boxShadow: isReady ? `0 0 20px -2px rgba(18, 184, 134, 0.5)` : 'none',
-                transition: 'all 0.3s ease',
-            })}
+            style={paperStyle}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
-            <Avatar size={90} radius="50%">
-                <IconUser />
+            <Box style={{ position: 'relative', width: 90, height: 90 }}>
+                <Avatar size={90} radius="50%" color={playerColor}>
+                    <PlayerIcon size="3.5rem" />
+                </Avatar>
                 {isHost && (
-                    <Box style={(theme: MantineTheme) => ({ position: 'absolute', top: -5, right: -5, color: theme.colors.yellow[5], filter: `drop-shadow(0 0 8px ${theme.colors.yellow[4]})` })}>
-                        <IconCrown size={30} stroke={1.5} />
+                    <Box style={(theme: MantineTheme) => ({
+                        position: 'absolute',
+                        top: -12,
+                        right: -12,
+                        color: theme.colors.yellow[5],
+                        filter: `drop-shadow(0 0 8px ${theme.colors.yellow[4]})`,
+                        transform: 'rotate(45deg)'
+                    })}>
+                        <IconCrown size={32} stroke={1.5} />
                     </Box>
                 )}
-            </Avatar>
-            <Stack align="center" gap={4}>
+            </Box>
+
+            <Stack align="center" gap={4} mt="sm">
                 <Text fz="lg" fw={700} lineClamp={1}>{player.username}</Text>
-                <Badge
-                    size="lg" variant="filled" w="100%"
-                    color={isReady ? 'teal' : 'gray'}
-                    leftSection={isReady ? <IconCheck size={14} /> : <IconX size={14} />}
-                >
-                    {isReady ? 'Ready' : 'Waiting'}
+                <Badge size="lg" variant="light" color="teal">
+                    Ready
                 </Badge>
             </Stack>
         </Paper>

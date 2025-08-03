@@ -1,21 +1,27 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
-import { Card, Stack, Box, Group, Text, Badge, Button, useMantineColorScheme, Tooltip } from '@mantine/core';
-import { IconUsers, IconClipboardCopy, IconCheck } from '@tabler/icons-react';
+import { useSession } from 'next-auth/react';
+import {Card, Stack, Box, Group, Text, Badge, Button, useMantineColorScheme, Tooltip, ActionIcon} from '@mantine/core';
+import {IconUsers, IconClipboardCopy, IconCheck, IconTrash} from '@tabler/icons-react';
 import {Room} from "@/services/room/types";
 
 interface RoomCardProps {
     room: Room;
     onJoin: (roomId: string) => void;
+    onDelete: (roomId: string) => void;
 }
 
-export function RoomCard({ room, onJoin }: RoomCardProps) {
+export function RoomCard({ room, onJoin, onDelete }: RoomCardProps) {
+    const { data: session } = useSession();
+
     const { colorScheme } = useMantineColorScheme();
-    const isFull = room.playersCount >= room.maxPlayers;
     const cardRef = useRef<HTMLDivElement>(null);
     const glowRef = useRef<HTMLDivElement>(null);
     const [copied, setCopied] = useState(false);
+
+    const isHost = session?.user?.id === room.hostId;
+    const isFull = room.playersCount >= room.maxPlayers;
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         const card = cardRef.current;
@@ -71,17 +77,22 @@ export function RoomCard({ room, onJoin }: RoomCardProps) {
             <div style={contentStyle}>
                 <Stack justify="space-between" h="100%">
                     <Box>
-                        <Group justify="space-between" align="center">
-                            <Text fw={700} size="xl">{room.name}</Text>
-                            <Tooltip label={copied ? "Copied!" : "Click to copy"} withArrow>
-                                <Badge
-                                    variant="light" color={copied ? "teal" : "cyan"} onClick={handleCopy}
-                                    style={{ cursor: 'pointer' }}
-                                    rightSection={copied ? <IconCheck size={14} /> : <IconClipboardCopy size={14} />}
-                                >
-                                    {room.id}
-                                </Badge>
-                            </Tooltip>
+                        <Group justify="space-between" align="flex-start">
+                            <Text fw={700} size="xl">{room.name}'s Room</Text>
+                            {isHost && (
+                                <Tooltip label="Delete Room" withArrow>
+                                    <ActionIcon
+                                        variant="outline"
+                                        color="red"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDelete(room.id);
+                                        }}
+                                    >
+                                        <IconTrash size={18} />
+                                    </ActionIcon>
+                                </Tooltip>
+                            )}
                         </Group>
                         <Group mt="sm" c="dimmed">
                             <IconUsers size={20} />
