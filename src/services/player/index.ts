@@ -4,7 +4,7 @@ import {
     PlayerSession,
     LoginPlayerPayload,
     ApiPlayer,
-    UpdatePlayerStatusPayload, DeletePlayerSessionPayload
+    UpdatePlayerStatusPayload, DeletePlayerSessionPayload, LobbyData
 } from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/playerSession`;
@@ -47,5 +47,17 @@ export const updatePlayerStatus = async (payload: UpdatePlayerStatusPayload): Pr
     } catch (error) {
         console.error("Failed to update player status:", error);
         throw new Error("Could not update player status.");
+    }
+};
+
+export const getPlayerSessionsByRoomId = async (roomId: string): Promise<LobbyData> => {
+    try {
+        const response = await axios.get<LobbyData>(`${API_URL}/get-player-session-by-roomId`, {
+            params: { roomId }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Failed to get player sessions for room:", error);
+        throw new Error("Could not fetch player sessions.");
     }
 };

@@ -36,3 +36,20 @@ export interface LoginPlayerPayload {
     playerCode: string;
     roomId: string;
 }
+
+export interface PlayerSessionInfo {
+    id: string;
+    playerSessionId: string;
+    playerCode: string;
+    userId: string;
+    roomId: string;
+}
+
+export interface LobbyData {
+    players: ApiPlayer[];
+    room: {
+        roomId: string;
+        hostId: string;
+    };
+    sessions: PlayerSessionInfo[];
+}

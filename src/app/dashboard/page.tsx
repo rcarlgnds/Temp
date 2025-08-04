@@ -9,17 +9,18 @@ import {
     Text, Center, Loader, TextInput
 } from '@mantine/core';
 import { useDisclosure } from "@mantine/hooks";
-import { IconPlus, IconLogin, IconTrash, IconTrophy } from '@tabler/icons-react'; // Import IconTrophy
+import { IconPlus, IconLogin, IconTrash, IconTrophy } from '@tabler/icons-react';
 import {
     getAllRooms, createRoom, addPlayerToRoom,
     removePlayerFromRoom, updateRoomStatus, deleteRoom
 } from '@/services/room';
-import { createPlayerSession, deletePlayerSession } from '@/services/player';
+import { createPlayerSession, deletePlayerSession, getPlayerSessionsByRoomId } from '@/services/player';
 import { InteractiveBackground } from "@/components/dashboard/InteractiveBackground";
 import { AppHeader } from '@/components/dashboard/AppHeader';
 import { RoomCard } from '@/components/dashboard/RoomCard';
 import { LobbyView } from '@/components/dashboard/LobbyView';
 import { Room } from "@/services/room/types";
+import { ApiPlayer } from '@/services/player/types';
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
@@ -63,58 +64,71 @@ export default function DashboardPage() {
         e.preventDefault();
         setIsCheckingRoom(true);
         setJoinError(null);
-
         const roomExists = rooms.find(room => room.id === joinRoomId);
-
         if (roomExists) {
             closeJoin();
             setJoinRoomId('');
-            handleViewRoom(joinRoomId);
+            await handleViewRoom(joinRoomId);
         } else {
-            setJoinError("Room ID not found. Please check the ID and try again.");
+            setJoinError("Room ID not found.");
         }
         setIsCheckingRoom(false);
     };
 
     const handleCreateRoom = async () => {
         if (!session?.user?.id || !session?.user?.email || !session.user.name) return;
-
         setIsCreatingRoom(true);
         const newRoomName = `${session.user.name}'s Room`;
         const payload = {
             Room: { RoomId: newRoomName, HostId: session.user.id, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
             Email: session.user.email
         };
-
         try {
             await createRoom(payload);
-
             closeCreate();
             await fetchAllRooms();
-
         } catch (error) {
             console.error("Error during room creation:", error);
         } finally {
             setIsCreatingRoom(false);
         }
     };
+
     const handleStartGame = async (roomId: string) => {
         try {
+            const lobbyData = await getPlayerSessionsByRoomId(roomId);
+            for (const player of lobbyData.players) {
+                await addPlayerToRoom({ RoomId: roomId, Email: player.email });
+            }
             await updateRoomStatus({ RoomId: roomId, Status: 'start' });
+
             const updatedRooms = await getAllRooms();
             setRooms(updatedRooms);
             const startedRoom = updatedRooms.find(r => r.id === roomId);
             if (startedRoom) setSelectedRoom(startedRoom);
+
         } catch (error) {
             console.error("Failed to start game:", error);
         }
     };
 
-    const handleViewRoom = (roomId: string) => {
-        const roomToView = rooms.find(room => room.id === roomId);
-        if (roomToView) {
-            setSelectedRoom(roomToView);
+    const handleViewRoom = async (roomId: string) => {
+        const baseRoomData = rooms.find(room => room.id === roomId);
+        if (!baseRoomData) return;
+
+        try {
+            const lobbyData = await getPlayerSessionsByRoomId(roomId);
+            const playersInSession = lobbyData.players || [];
+
+            const roomWithSessionPlayers: Room = {
+                ...baseRoomData,
+                players: playersInSession,
+                playersCount: playersInSession.length,
+            };
+            setSelectedRoom(roomWithSessionPlayers);
             setActiveView('lobby');
+        } catch (error) {
+            console.error(`Failed to view room ${roomId}:`, error);
         }
     };
 
@@ -122,18 +136,10 @@ export default function DashboardPage() {
         if (!session?.user?.id || !session?.user?.email) return;
         setIsJoining(true);
         try {
-            await createPlayerSession({ UserId: session.user.id, RoomId: roomId });
-            await addPlayerToRoom({ RoomId: roomId, Email: session.user.email });
-            const updatedRooms = await getAllRooms();
-            setRooms(updatedRooms);
-            const newlyJoinedRoom = updatedRooms.find(r => r.id === roomId);
-            if (newlyJoinedRoom) {
-                setSelectedRoom(newlyJoinedRoom);
-            } else {
-                handleBackToDashboard();
-            }
+            await createPlayerSession({ userId: session.user.id, roomId: roomId });
+            await handleViewRoom(roomId);
         } catch (error) {
-            console.error("Failed to join game:", error);
+            console.error("Failed to join game session:", error);
         } finally {
             setIsJoining(false);
         }
@@ -142,20 +148,18 @@ export default function DashboardPage() {
     const handleLeaveRoom = async (roomId: string) => {
         if (!session?.user?.id || !session?.user?.email) return;
 
-        const room = rooms.find(r => r.id === roomId);
-        if (!room) return;
+        try {
+            await deletePlayerSession({ email: session.user.email, roomId: roomId });
 
-        if (room.players.length === 1 && room.players[0].id === session.user.id) {
-            handleDeleteRoom(roomId);
-        } else {
-            try {
-                await removePlayerFromRoom({ RoomId: roomId, Email: session.user.email });
-                await deletePlayerSession({ email: session.user.email, roomId: roomId });
-                handleBackToDashboard();
-                await fetchAllRooms();
-            } catch (error) {
-                console.error("Failed to leave room:", error);
+            const lobbyData = await getPlayerSessionsByRoomId(roomId);
+            if (lobbyData.sessions.length === 0) {
+                await deleteRoom({ roomId: roomId });
             }
+
+            handleBackToDashboard();
+            await fetchAllRooms();
+        } catch (error) {
+            console.error("Failed to leave room:", error);
         }
     };
 
@@ -169,11 +173,8 @@ export default function DashboardPage() {
 
     const confirmDeleteRoom = async () => {
         if (!roomToDelete || !session?.user?.email) return;
-
         try {
             await deleteRoom({ roomId: roomToDelete.id });
-            await deletePlayerSession({ email: session.user.email, roomId: roomToDelete.id });
-
             setRooms(currentRooms => currentRooms.filter(room => room.id !== roomToDelete.id));
         } catch(error) {
             console.error("Failed to delete room:", error);
@@ -203,10 +204,9 @@ export default function DashboardPage() {
     return (
         <>
             <InteractiveBackground colorScheme={colorScheme} />
-
             <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create a New Room</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">A new room will be created with your name. Are you sure?</Text>
+                    <Text>A new room will be created with your name. Are you sure?</Text>
                     <Button
                         fullWidth mt="md" radius="md" variant="gradient"
                         gradient={{ from: '#DAA520', to: '#3C2A21' }}
@@ -216,12 +216,10 @@ export default function DashboardPage() {
                     </Button>
                 </Stack>
             </Modal>
-
             <Modal opened={joinOpened} onClose={closeJoin} title={<Text fw={700}>Join Room by ID</Text>} radius="lg" centered>
                 <form onSubmit={handleJoinById}>
                     <Stack>
                         <TextInput
-                            mt="md"
                             label="Room ID"
                             placeholder="Enter the Room ID"
                             value={joinRoomId}
@@ -241,10 +239,9 @@ export default function DashboardPage() {
                     </Stack>
                 </form>
             </Modal>
-
             <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title={<Text fw={700}>Confirm Deletion</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
+                    <Text>Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeDeleteModal}>Cancel</Button>
                         <Button color="red" leftSection={<IconTrash size={16}/>} onClick={confirmDeleteRoom}>
@@ -253,7 +250,6 @@ export default function DashboardPage() {
                     </Group>
                 </Stack>
             </Modal>
-
             <AppShell header={{ height: 70 }} padding="md" styles={{ main: { backgroundColor: 'transparent', position: 'relative', zIndex: 1 } }}>
                 <AppHeader />
                 <AppShell.Main>
@@ -262,13 +258,7 @@ export default function DashboardPage() {
                             <Group justify="space-between" mb="xl">
                                 <Title order={1} c={colorScheme === 'dark' ? "white" : "gray.8"}>Available Rooms</Title>
                                 <Group>
-                                    <Button
-                                        component={Link}
-                                        href="/leaderboard"
-                                        variant="light"
-                                        color="yellow"
-                                        leftSection={<IconTrophy size={18} />}
-                                    >
+                                    <Button component={Link} href="/leaderboard" variant="light" color="yellow" leftSection={<IconTrophy size={18} />}>
                                         Leaderboard
                                     </Button>
                                     <Button onClick={openCreate} variant="gradient" gradient={{ from: '#A99260', to: '#3E2C23' }} leftSection={<IconPlus size={18} />}>Create Room</Button>
