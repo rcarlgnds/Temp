@@ -126,7 +126,7 @@ export default function DashboardPage() {
         if (!session?.user?.id || !session?.user?.email) return;
         setIsJoining(true);
         try {
-            await createPlayerSession({ userId: session.user.id, roomId: roomId });
+            await createPlayerSession({ UserId: session.user.id, RoomId: roomId });
             await addPlayerToRoom({ RoomId: roomId, Email: session.user.email });
             const updatedRooms = await getAllRooms();
             setRooms(updatedRooms);
