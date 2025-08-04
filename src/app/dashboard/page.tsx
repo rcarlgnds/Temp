@@ -78,30 +78,26 @@ export default function DashboardPage() {
 
     const handleCreateRoom = async () => {
         if (!session?.user?.id || !session?.user?.email || !session.user.name) return;
+
         setIsCreatingRoom(true);
         const newRoomName = `${session.user.name}'s Room`;
         const payload = {
             Room: { RoomId: newRoomName, HostId: session.user.id, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
             Email: session.user.email
         };
+
         try {
-            const newRoom = await createRoom(payload);
-            await addPlayerToRoom({ RoomId: newRoom.id, Email: session.user.email });
+            await createRoom(payload);
+
             closeCreate();
-            const updatedRooms = await getAllRooms();
-            setRooms(updatedRooms);
-            const createdRoom = updatedRooms.find(room => room.id === newRoom.id);
-            if (createdRoom) {
-                setSelectedRoom(createdRoom);
-                setActiveView('lobby');
-            }
+            await fetchAllRooms();
+
         } catch (error) {
             console.error("Error during room creation:", error);
         } finally {
             setIsCreatingRoom(false);
         }
     };
-
     const handleStartGame = async (roomId: string) => {
         try {
             await updateRoomStatus({ RoomId: roomId, Status: 'start' });
@@ -248,7 +244,7 @@ export default function DashboardPage() {
 
             <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title={<Text fw={700}>Confirm Deletion</Text>} radius="lg" centered>
                 <Stack>
-                    <Text>Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
+                    <Text mt="md">Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeDeleteModal}>Cancel</Button>
                         <Button color="red" leftSection={<IconTrash size={16}/>} onClick={confirmDeleteRoom}>
