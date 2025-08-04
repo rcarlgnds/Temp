@@ -14,3 +14,11 @@ export interface ApiUser {
     username: string;
     email: string;
 }
+
+export interface LeaderboardPlayer {
+    playerId: string;
+    username: string;
+    email: string;
+    score: number;
+    classCode?: string;
+}

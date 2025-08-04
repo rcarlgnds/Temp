@@ -9,7 +9,7 @@ import {
     Text, Center, Loader, TextInput
 } from '@mantine/core';
 import { useDisclosure } from "@mantine/hooks";
-import { IconPlus, IconLogin, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconLogin, IconTrash, IconTrophy } from '@tabler/icons-react'; // Import IconTrophy
 import {
     getAllRooms, createRoom, addPlayerToRoom,
     removePlayerFromRoom, updateRoomStatus, deleteRoom
@@ -210,7 +210,7 @@ export default function DashboardPage() {
 
             <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create a New Room</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">A new room will be created with your name. Are you sure?</Text>
+                    <Text>A new room will be created with your name. Are you sure?</Text>
                     <Button
                         fullWidth mt="md" radius="md" variant="gradient"
                         gradient={{ from: '#DAA520', to: '#3C2A21' }}
@@ -225,7 +225,6 @@ export default function DashboardPage() {
                 <form onSubmit={handleJoinById}>
                     <Stack>
                         <TextInput
-                            mt="md"
                             label="Room ID"
                             placeholder="Enter the Room ID"
                             value={joinRoomId}
@@ -235,9 +234,9 @@ export default function DashboardPage() {
                         />
                         <Button
                             type="submit"
-                            gradient={{ from: '#DAA520', to: '#3C2A21' }}
                             fullWidth mt="md" radius="md"
                             variant="gradient"
+                            gradient={{ from: 'cyan', to: 'blue' }}
                             loading={isCheckingRoom}
                         >
                             Join
@@ -266,6 +265,15 @@ export default function DashboardPage() {
                             <Group justify="space-between" mb="xl">
                                 <Title order={1} c={colorScheme === 'dark' ? "white" : "gray.8"}>Available Rooms</Title>
                                 <Group>
+                                    <Button
+                                        component={Link}
+                                        href="/leaderboard"
+                                        variant="light"
+                                        color="yellow"
+                                        leftSection={<IconTrophy size={18} />}
+                                    >
+                                        Leaderboard
+                                    </Button>
                                     <Button onClick={openCreate} variant="gradient" gradient={{ from: '#A99260', to: '#3E2C23' }} leftSection={<IconPlus size={18} />}>Create Room</Button>
                                     <Button onClick={openJoin} variant="outline" styles={{root: {borderColor: '#A99260', color: '#A99260'}}} leftSection={<IconLogin size={18} />}>Join by ID</Button>
                                 </Group>
