@@ -19,6 +19,10 @@ export interface UpdateRoomStatusPayload {
     Status: 'waiting' | 'start' | 'finished';
 }
 
+export interface DeleteRoomPayload {
+    roomId: string;
+}
+
 export interface ApiRoom {
     id: string;
     roomId: string;

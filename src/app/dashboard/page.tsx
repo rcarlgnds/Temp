@@ -12,9 +12,9 @@ import { useDisclosure } from "@mantine/hooks";
 import { IconPlus, IconLogin, IconTrash } from '@tabler/icons-react';
 import {
     getAllRooms, createRoom, addPlayerToRoom,
-    removePlayerFromRoom, updateRoomStatus
+    removePlayerFromRoom, updateRoomStatus, deleteRoom
 } from '@/services/room';
-import { createPlayerSession } from '@/services/player';
+import { createPlayerSession, deletePlayerSession } from '@/services/player';
 import { InteractiveBackground } from "@/components/dashboard/InteractiveBackground";
 import { AppHeader } from '@/components/dashboard/AppHeader';
 import { RoomCard } from '@/components/dashboard/RoomCard';
@@ -29,10 +29,8 @@ export default function DashboardPage() {
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false);
     const [joinOpened, { open: openJoin, close: closeJoin }] = useDisclosure(false);
-
     const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
-    const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
-
+    const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loadingRooms, setLoadingRooms] = useState(true);
@@ -58,18 +56,11 @@ export default function DashboardPage() {
     }, [status]);
 
     const handleCreateRoom = async () => {
-        if (!session?.user?.id || !session?.user?.email || !session.user.name) {
-            console.error("User session data is missing");
-            return;
-        }
+        if (!session?.user?.id || !session?.user?.email || !session.user.name) return;
         setIsCreatingRoom(true);
         const newRoomName = `${session.user.name}'s Room`;
         const payload = {
-            Room: {
-                RoomId: newRoomName,
-                HostId: session.user.id,
-                TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b",
-            },
+            Room: { RoomId: newRoomName, HostId: session.user.id, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
             Email: session.user.email
         };
         try {
@@ -85,7 +76,7 @@ export default function DashboardPage() {
                 setActiveView('lobby');
             }
         } catch (error) {
-            console.error("Error during room creation and join process:", error);
+            console.error("Error during room creation:", error);
         } finally {
             setIsCreatingRoom(false);
         }
@@ -94,13 +85,10 @@ export default function DashboardPage() {
     const handleStartGame = async (roomId: string) => {
         try {
             await updateRoomStatus({ RoomId: roomId, Status: 'start' });
-            console.log(`Game in room ${roomId} has been started!`);
             const updatedRooms = await getAllRooms();
             setRooms(updatedRooms);
             const startedRoom = updatedRooms.find(r => r.id === roomId);
-            if (startedRoom) {
-                setSelectedRoom(startedRoom);
-            }
+            if (startedRoom) setSelectedRoom(startedRoom);
         } catch (error) {
             console.error("Failed to start game:", error);
         }
@@ -115,10 +103,7 @@ export default function DashboardPage() {
     };
 
     const handleJoinGameInLobby = async (roomId: string) => {
-        if (!session?.user?.id || !session?.user?.email) {
-            console.error("User session data is not available.");
-            return;
-        }
+        if (!session?.user?.id || !session?.user?.email) return;
         setIsJoining(true);
         try {
             await createPlayerSession({ UserId: session.user.id, RoomId: roomId });
@@ -139,34 +124,48 @@ export default function DashboardPage() {
     };
 
     const handleLeaveRoom = async (roomId: string) => {
-        if (!session?.user?.email) {
-            console.error("User email is not available.");
-            return;
-        }
-        try {
-            await removePlayerFromRoom({ RoomId: roomId, Email: session.user.email });
-            handleBackToDashboard();
-            await fetchAllRooms();
-        } catch (error) {
-            console.error("Failed to leave room:", error);
+        if (!session?.user?.id || !session?.user?.email) return;
+
+        const room = rooms.find(r => r.id === roomId);
+        if (!room) return;
+
+        if (room.players.length === 1 && room.players[0].id === session.user.id) {
+            handleDeleteRoom(roomId);
+        } else {
+            try {
+                await removePlayerFromRoom({ RoomId: roomId, Email: session.user.email });
+                await deletePlayerSession({ email: session.user.email, roomId: roomId });
+                handleBackToDashboard();
+                await fetchAllRooms();
+            } catch (error) {
+                console.error("Failed to leave room:", error);
+            }
         }
     };
 
     const handleDeleteRoom = (roomId: string) => {
-        setRoomToDelete(roomId);
-        openDeleteModal();
+        const room = rooms.find(r => r.id === roomId);
+        if (room) {
+            setRoomToDelete(room);
+            openDeleteModal();
+        }
     };
 
-    const confirmDeleteRoom = () => {
-        if (!roomToDelete) return;
+    const confirmDeleteRoom = async () => {
+        if (!roomToDelete || !session?.user?.email) return;
 
-        console.log(`--- PLACEHOLDER ---`);
-        console.log(`API Call to delete room with ID: ${roomToDelete}`);
-        console.log(`-------------------`);
+        try {
+            await deleteRoom({ roomId: roomToDelete.id });
+            await deletePlayerSession({ email: session.user.email, roomId: roomToDelete.id });
 
-        setRooms(currentRooms => currentRooms.filter(room => room.id !== roomToDelete));
-        setRoomToDelete(null);
-        closeDeleteModal();
+            setRooms(currentRooms => currentRooms.filter(room => room.id !== roomToDelete.id));
+        } catch(error) {
+            console.error("Failed to delete room:", error);
+        } finally {
+            setRoomToDelete(null);
+            closeDeleteModal();
+            handleBackToDashboard();
+        }
     };
 
     const handleBackToDashboard = () => {
@@ -191,7 +190,7 @@ export default function DashboardPage() {
 
             <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create a New Room</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">A new room will be created with your name. Are you sure?</Text>
+                    <Text>A new room will be created with your name. Are you sure?</Text>
                     <Button
                         fullWidth mt="md" radius="md" variant="gradient"
                         gradient={{ from: '#DAA520', to: '#3C2A21' }}
@@ -202,10 +201,9 @@ export default function DashboardPage() {
                 </Stack>
             </Modal>
 
-            {/* Modal baru untuk Delete Room */}
             <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title={<Text fw={700}>Confirm Deletion</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">Are you sure you want to delete room "{roomToDelete}"? This action cannot be undone.</Text>
+                    <Text>Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeDeleteModal}>Cancel</Button>
                         <Button color="red" leftSection={<IconTrash size={16}/>} onClick={confirmDeleteRoom}>

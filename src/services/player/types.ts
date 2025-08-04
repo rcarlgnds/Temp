@@ -19,6 +19,11 @@ export interface UpdatePlayerStatusPayload {
     Status: 'Ready' | 'Not Ready';
 }
 
+export interface DeletePlayerSessionPayload {
+    email: string;
+    roomId: string;
+}
+
 export interface PlayerSession {
     id: string;
     playerSessionId: string;

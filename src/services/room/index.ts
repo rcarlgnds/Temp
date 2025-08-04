@@ -6,7 +6,7 @@ import {
     ModifyPlayerInRoomPayload,
     UpdateRoomStatusPayload,
     RoomLeaderboard,
-    RoomStatus
+    RoomStatus, DeleteRoomPayload
 } from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/rooms`;
@@ -57,6 +57,16 @@ export const removePlayerFromRoom = async (payload: ModifyPlayerInRoomPayload): 
     } catch (error) {
         console.error("Failed to remove player from room:", error);
         throw new Error("Could not remove player from room.");
+    }
+};
+
+export const deleteRoom = async (payload: DeleteRoomPayload): Promise<any> => {
+    try {
+        const response = await axios.post(`${API_URL}/delete-room`, payload);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to delete room:", error);
+        throw new Error("Could not delete room.");
     }
 };
 

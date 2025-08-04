@@ -4,7 +4,7 @@ import {
     PlayerSession,
     LoginPlayerPayload,
     ApiPlayer,
-    UpdatePlayerStatusPayload
+    UpdatePlayerStatusPayload, DeletePlayerSessionPayload
 } from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/playerSession`;
@@ -16,6 +16,16 @@ export const createPlayerSession = async (payload: CreatePlayerSessionPayload): 
     } catch (error) {
         console.error("Failed to create player session:", error);
         throw new Error("Could not create player session.");
+    }
+};
+
+export const deletePlayerSession = async (payload: DeletePlayerSessionPayload): Promise<any> => {
+    try {
+        const response = await axios.post(`${API_URL}/delete-player-session`, payload);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to delete player session:", error);
+        throw new Error("Could not delete player session.");
     }
 };
 
