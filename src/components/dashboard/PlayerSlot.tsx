@@ -92,8 +92,9 @@ export function PlayerSlot({ player, isHost }: PlayerSlotProps) {
             </Box>
 
             <Stack align="center" gap={4} mt="sm">
-                <Text fz="lg" fw={700} lineClamp={1}>{player.username}</Text>
-                <Badge size="lg" variant="light" color="teal">
+                <Text fz="lg" fw={700} lineClamp={1} size="sm">{player.username}</Text>
+                <Text fz="lg" fw={500} size="sm">{player.email}</Text>
+                <Badge size="lg" variant="light" color="teal" mt="md" mb="sm">
                     Ready
                 </Badge>
             </Stack>

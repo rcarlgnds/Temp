@@ -133,8 +133,16 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
                                 </>
                             ) : (
                                 <Group justify="flex-end">
-                                    <Button variant="gradient" gradient={{ from: 'yellow', to: 'orange' }} size="md" w={200} onClick={() => onJoinGame(room.id)} loading={isJoining}>
-                                        Join Game
+                                    <Button
+                                        variant="gradient"
+                                        gradient={{ from: 'yellow', to: 'orange' }}
+                                        size="md"
+                                        w={200}
+                                        onClick={() => onJoinGame(room.id)}
+                                        loading={isJoining}
+                                        disabled={room.status !== 'waiting'}
+                                    >
+                                        {room.status === 'waiting' ? 'Join Game' : 'Game In Progress'}
                                     </Button>
                                 </Group>
                             )}

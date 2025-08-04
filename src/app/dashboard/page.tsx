@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
     AppShell, Title, Button, Group, SimpleGrid,
     Container, useMantineColorScheme, Modal, Stack,
-    Text, Center, Loader
+    Text, Center, Loader, TextInput
 } from '@mantine/core';
 import { useDisclosure } from "@mantine/hooks";
 import { IconPlus, IconLogin, IconTrash } from '@tabler/icons-react';
@@ -32,6 +32,10 @@ export default function DashboardPage() {
     const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
     const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
+    const [joinRoomId, setJoinRoomId] = useState('');
+    const [joinError, setJoinError] = useState<string | null>(null);
+    const [isCheckingRoom, setIsCheckingRoom] = useState(false);
+
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loadingRooms, setLoadingRooms] = useState(true);
     const [isJoining, setIsJoining] = useState(false);
@@ -55,22 +59,42 @@ export default function DashboardPage() {
         }
     }, [status]);
 
+    const handleJoinById = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsCheckingRoom(true);
+        setJoinError(null);
+
+        const roomExists = rooms.find(room => room.id === joinRoomId);
+
+        if (roomExists) {
+            closeJoin();
+            setJoinRoomId('');
+            handleViewRoom(joinRoomId);
+        } else {
+            setJoinError("Room ID not found. Please check the ID and try again.");
+        }
+        setIsCheckingRoom(false);
+    };
+
     const handleCreateRoom = async () => {
         if (!session?.user?.id || !session?.user?.email || !session.user.name) return;
-
         setIsCreatingRoom(true);
-        const newRoomName = `${session.user.name}`;
+        const newRoomName = `${session.user.name}'s Room`;
         const payload = {
             Room: { RoomId: newRoomName, HostId: session.user.id, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
             Email: session.user.email
         };
-
         try {
-            await createRoom(payload);
-
+            const newRoom = await createRoom(payload);
+            await addPlayerToRoom({ RoomId: newRoom.id, Email: session.user.email });
             closeCreate();
-            await fetchAllRooms();
-
+            const updatedRooms = await getAllRooms();
+            setRooms(updatedRooms);
+            const createdRoom = updatedRooms.find(room => room.id === newRoom.id);
+            if (createdRoom) {
+                setSelectedRoom(createdRoom);
+                setActiveView('lobby');
+            }
         } catch (error) {
             console.error("Error during room creation:", error);
         } finally {
@@ -102,7 +126,7 @@ export default function DashboardPage() {
         if (!session?.user?.id || !session?.user?.email) return;
         setIsJoining(true);
         try {
-            await createPlayerSession({ UserId: session.user.id, RoomId: roomId });
+            await createPlayerSession({ userId: session.user.id, roomId: roomId });
             await addPlayerToRoom({ RoomId: roomId, Email: session.user.email });
             const updatedRooms = await getAllRooms();
             setRooms(updatedRooms);
@@ -186,7 +210,7 @@ export default function DashboardPage() {
 
             <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create a New Room</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">A new room will be created. Are you sure?</Text>
+                    <Text mt="md">A new room will be created with your name. Are you sure?</Text>
                     <Button
                         fullWidth mt="md" radius="md" variant="gradient"
                         gradient={{ from: '#DAA520', to: '#3C2A21' }}
@@ -197,9 +221,34 @@ export default function DashboardPage() {
                 </Stack>
             </Modal>
 
+            <Modal opened={joinOpened} onClose={closeJoin} title={<Text fw={700}>Join Room by ID</Text>} radius="lg" centered>
+                <form onSubmit={handleJoinById}>
+                    <Stack>
+                        <TextInput
+                            mt="md"
+                            label="Room ID"
+                            placeholder="Enter the Room ID"
+                            value={joinRoomId}
+                            onChange={(e) => setJoinRoomId(e.currentTarget.value)}
+                            error={joinError}
+                            required
+                        />
+                        <Button
+                            type="submit"
+                            gradient={{ from: '#DAA520', to: '#3C2A21' }}
+                            fullWidth mt="md" radius="md"
+                            variant="gradient"
+                            loading={isCheckingRoom}
+                        >
+                            Join
+                        </Button>
+                    </Stack>
+                </form>
+            </Modal>
+
             <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title={<Text fw={700}>Confirm Deletion</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
+                    <Text>Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeDeleteModal}>Cancel</Button>
                         <Button color="red" leftSection={<IconTrash size={16}/>} onClick={confirmDeleteRoom}>
