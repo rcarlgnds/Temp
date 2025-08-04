@@ -25,6 +25,7 @@ export interface DeleteRoomPayload {
 
 export interface ApiRoom {
     id: string;
+    topicId: string;
     roomId: string;
     hostId: string;
     maxPlayers: number;
@@ -35,11 +36,13 @@ export interface ApiRoom {
 
 export interface Room {
     id: string;
+    topicId: string;
     name: string;
     playersCount: number;
     maxPlayers: number;
     players: ApiPlayer[];
     hostId: string;
+    status: string;
 }
 
 export interface RoomLeaderboard {

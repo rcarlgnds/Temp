@@ -18,11 +18,13 @@ export const getAllRooms = async (): Promise<Room[]> => {
 
         return response.data.data.map((apiRoom): Room => ({
             id: apiRoom.id,
+            topicId: apiRoom.topicId,
             name: apiRoom.roomId,
             playersCount: apiRoom.players.length,
             maxPlayers: apiRoom.maxPlayers,
             players: apiRoom.players,
             hostId: apiRoom.hostId,
+            status: apiRoom.status
         }));
     } catch (error) {
         console.error("Failed to fetch rooms:", error);

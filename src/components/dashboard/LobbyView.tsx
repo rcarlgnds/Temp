@@ -1,10 +1,10 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useSession } from "next-auth/react";
-import { Container, Paper, Stack, Button, Group, Badge, Divider, SimpleGrid, MantineTheme, Modal, Text } from "@mantine/core";
+import { Container, Paper, Stack, Button, Group, Badge, Divider, SimpleGrid, MantineTheme, Modal, Text, Tooltip, Title } from "@mantine/core";
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowLeft, IconClipboardCopy, IconLogout, IconPlayerPlay } from '@tabler/icons-react';
+import { IconArrowLeft, IconCopy, IconCheck, IconLogout, IconPlayerPlay, IconUserCircle, IconFileDescription, IconActivity } from '@tabler/icons-react';
 import { PlayerSlot } from './PlayerSlot';
 import { Room } from "@/services/room/types";
 
@@ -20,6 +20,7 @@ interface LobbyViewProps {
 export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, isJoining }: LobbyViewProps) {
     const { data: session } = useSession();
     const [opened, { open: openConfirm, close: closeConfirm }] = useDisclosure(false);
+    const [copied, setCopied] = useState(false);
 
     if (!room) return null;
 
@@ -30,6 +31,13 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
     const handleConfirmStart = () => {
         onStartGame(room.id);
         closeConfirm();
+    };
+
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(room.id);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
     };
 
     return (
@@ -50,14 +58,44 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
                     backdropFilter: 'blur(16px)', borderColor: theme.colors.dark[4],
                 })}>
                     <Stack>
-                        <Group justify="space-between">
+                        <Group justify="space-between" align="flex-start">
                             <Button variant="subtle" color="gray" leftSection={<IconArrowLeft size={16} />} onClick={onBack}>
                                 Back to Dashboard
                             </Button>
-                            <Badge size="lg" variant="light" color="cyan" rightSection={<IconClipboardCopy size={14} />}>
-                                {room.name}
-                            </Badge>
+                            <Tooltip label={copied ? "ID Copied!" : "Click title to copy Room ID"} withArrow>
+                                <Group
+                                    gap="xs"
+                                    onClick={handleCopy}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <Title order={4} c={copied ? 'teal.5' : 'medievalGold.4'}>
+                                        {room.name}
+                                    </Title>
+                                    {copied ? <IconCheck size={20} color="teal" /> : <IconCopy size={20} />}
+                                </Group>
+                            </Tooltip>
                         </Group>
+
+                        <Stack gap="xs" mt="sm" ml="md">
+                            <Group justify="space-between">
+                                <Group gap="xs" c="dimmed">
+                                    <IconUserCircle size={16} />
+                                    <Text size="xs">Host ID: {room.hostId}</Text>
+                                </Group>
+                                <Badge
+                                    color={room.status === 'waiting' ? 'yellow' : 'green'}
+                                    variant="light"
+                                    leftSection={<IconActivity size={14}/>}
+                                >
+                                    {room.status}
+                                </Badge>
+                            </Group>
+                            <Group gap="xs" c="dimmed">
+                                <IconFileDescription size={16} />
+                                <Text size="xs">Topic ID: {room.topicId}</Text>
+                            </Group>
+                        </Stack>
+
                         <Divider my="sm" />
                         <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
                             {Array.from({ length: room.maxPlayers }).map((_, index) => {

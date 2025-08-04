@@ -57,24 +57,20 @@ export default function DashboardPage() {
 
     const handleCreateRoom = async () => {
         if (!session?.user?.id || !session?.user?.email || !session.user.name) return;
+
         setIsCreatingRoom(true);
-        const newRoomName = `${session.user.name}'s Room`;
+        const newRoomName = `${session.user.name}`;
         const payload = {
             Room: { RoomId: newRoomName, HostId: session.user.id, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
             Email: session.user.email
         };
+
         try {
-            const newRoom = await createRoom(payload);
-            await createPlayerSession({ UserId: session.user.id, RoomId: newRoom.id });
-            await addPlayerToRoom({ RoomId: newRoom.id, Email: session.user.email });
+            await createRoom(payload);
+
             closeCreate();
-            const updatedRooms = await getAllRooms();
-            setRooms(updatedRooms);
-            const createdRoom = updatedRooms.find(room => room.id === newRoom.id);
-            if (createdRoom) {
-                setSelectedRoom(createdRoom);
-                setActiveView('lobby');
-            }
+            await fetchAllRooms();
+
         } catch (error) {
             console.error("Error during room creation:", error);
         } finally {
@@ -175,7 +171,7 @@ export default function DashboardPage() {
 
     if (status !== "authenticated") {
         return (
-            <Container style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', zIndex: 1 }}>
+            <Container style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
                 <Title c="white" ta="center">Akses Ditolak</Title>
                 <Button component={Link} href="/" mt="xl" size="lg" variant="gradient" gradient={{from: 'cyan', to: 'blue'}}>
                     Ke Halaman Login
@@ -190,7 +186,7 @@ export default function DashboardPage() {
 
             <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create a New Room</Text>} radius="lg" centered>
                 <Stack>
-                    <Text mt="md">A new room will be created with your name. Are you sure?</Text>
+                    <Text mt="md">A new room will be created. Are you sure?</Text>
                     <Button
                         fullWidth mt="md" radius="md" variant="gradient"
                         gradient={{ from: '#DAA520', to: '#3C2A21' }}
