@@ -1,17 +1,17 @@
 import axios from 'axios';
 import {
     CreatePlayerSessionPayload,
-    PlayerSession,
+    PlayerSessionInfo,
     LoginPlayerPayload,
     ApiPlayer,
-    UpdatePlayerStatusPayload, DeletePlayerSessionPayload, LobbyData
+    UpdatePlayerStatusPayload, DeletePlayerSessionPayload, LobbyData, LobbyApiResponse
 } from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/playerSession`;
 
-export const createPlayerSession = async (payload: CreatePlayerSessionPayload): Promise<PlayerSession> => {
+export const createPlayerSession = async (payload: CreatePlayerSessionPayload): Promise<PlayerSessionInfo> => {
     try {
-        const response = await axios.post<PlayerSession>(`${API_URL}/create-player-session`, payload);
+        const response = await axios.post<PlayerSessionInfo>(`${API_URL}/create-player-session`, payload);
         return response.data;
     } catch (error) {
         console.error("Failed to create player session:", error);
@@ -52,11 +52,19 @@ export const updatePlayerStatus = async (payload: UpdatePlayerStatusPayload): Pr
 
 export const getPlayerSessionsByRoomId = async (roomId: string): Promise<LobbyData> => {
     try {
-        const response = await axios.get<LobbyData>(`${API_URL}/get-player-session-by-roomId`, {
+        const response = await axios.get<LobbyApiResponse>(`${API_URL}/get-player-session-by-roomId`, {
             params: { roomId }
         });
-        return response.data;
+        return response.data.data;
     } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+            console.log(`No sessions found for room ${roomId}, returning an empty lobby.`);
+            return {
+                players: [],
+                room: { roomId: roomId, hostId: '' },
+                sessions: []
+            };
+        }
         console.error("Failed to get player sessions for room:", error);
         throw new Error("Could not fetch player sessions.");
     }

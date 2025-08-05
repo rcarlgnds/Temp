@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {AddUserPayload, LoginPayload, ApiUser, LeaderboardPlayer} from './types';
+import { AddUserPayload, LoginPayload, ApiUser } from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/users`;
 
@@ -25,20 +25,20 @@ export const loginUser = async (payload: LoginPayload): Promise<ApiUser> => {
 
 export const getUserByEmail = async (email: string): Promise<ApiUser> => {
     try {
-        const response = await axios.get<ApiUser>(`${API_URL}/get-player-by-email`, {
+        const response = await axios.get<{ message: string, player: ApiUser }>(`${API_URL}/get-player-by-email`, {
             params: { Email: email }
         });
-        return response.data;
+        return response.data.player;
     } catch (error) {
         console.error("Failed to get user by email:", error);
         throw new Error("Could not fetch user.");
     }
 };
 
-export const getGlobalLeaderboard = async (): Promise<LeaderboardPlayer[]> => {
+export const getGlobalLeaderboard = async (): Promise<any[]> => {
     try {
-        const response = await axios.get<{ message: string, data: LeaderboardPlayer[] }>(`${API_URL}/get-global-leaderboard`);
-        return response.data.data.sort((a, b) => b.score - a.score);
+        const response = await axios.get(`${API_URL}/get-global-leaderboard`);
+        return response.data.data.sort((a: { score: number; }, b: { score: number; }) => b.score - a.score);
     } catch (error) {
         console.error("Failed to fetch global leaderboard:", error);
         throw new Error("Could not fetch leaderboard.");

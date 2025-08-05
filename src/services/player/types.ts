@@ -9,14 +9,14 @@ export interface ApiPlayer {
 }
 
 export interface CreatePlayerSessionPayload {
-    UserId: string;
-    RoomId: string;
+    userId: string;
+    roomId: string;
 }
 
 export interface UpdatePlayerStatusPayload {
-    PlayerId: string;
-    RoomId: string;
-    Status: 'Ready' | 'Not Ready';
+    playerId: string;
+    roomId: string;
+    status: 'Ready' | 'Not Ready';
 }
 
 export interface DeletePlayerSessionPayload {
@@ -24,7 +24,7 @@ export interface DeletePlayerSessionPayload {
     roomId: string;
 }
 
-export interface PlayerSession {
+export interface PlayerSessionInfo {
     id: string;
     playerSessionId: string;
     playerCode: string;
@@ -52,4 +52,9 @@ export interface LobbyData {
         hostId: string;
     };
     sessions: PlayerSessionInfo[];
+}
+
+export interface LobbyApiResponse {
+    message: string;
+    data: LobbyData;
 }

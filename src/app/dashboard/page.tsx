@@ -20,7 +20,7 @@ import { AppHeader } from '@/components/dashboard/AppHeader';
 import { RoomCard } from '@/components/dashboard/RoomCard';
 import { LobbyView } from '@/components/dashboard/LobbyView';
 import { Room } from "@/services/room/types";
-import { ApiPlayer } from '@/services/player/types';
+import {getUserByEmail} from "@/services/user";
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
@@ -76,14 +76,22 @@ export default function DashboardPage() {
     };
 
     const handleCreateRoom = async () => {
-        if (!session?.user?.id || !session?.user?.email || !session.user.name) return;
+        if (!session?.user?.email || !session.user.name) return;
+
         setIsCreatingRoom(true);
-        const newRoomName = `${session.user.name}'s Room`;
-        const payload = {
-            Room: { RoomId: newRoomName, HostId: session.user.id, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
-            Email: session.user.email
-        };
         try {
+            const userProfile = await getUserByEmail(session.user.email);
+            if (!userProfile || !userProfile.playerId) {
+                throw new Error("Could not retrieve user profile from backend.");
+            }
+            const hostId = userProfile.playerId;
+            const newRoomName = `${session.user.name}'s Room`;
+
+            const payload = {
+                Room: { RoomId: newRoomName, HostId: hostId, TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b" },
+                Email: session.user.email
+            };
+
             await createRoom(payload);
             closeCreate();
             await fetchAllRooms();
@@ -94,11 +102,14 @@ export default function DashboardPage() {
         }
     };
 
+
     const handleStartGame = async (roomId: string) => {
         try {
             const lobbyData = await getPlayerSessionsByRoomId(roomId);
-            for (const player of lobbyData.players) {
-                await addPlayerToRoom({ RoomId: roomId, Email: player.email });
+            if (lobbyData && lobbyData.players) {
+                for (const player of lobbyData.players) {
+                    await addPlayerToRoom({ RoomId: roomId, Email: player.email });
+                }
             }
             await updateRoomStatus({ RoomId: roomId, Status: 'start' });
 
@@ -133,11 +144,21 @@ export default function DashboardPage() {
     };
 
     const handleJoinGameInLobby = async (roomId: string) => {
-        if (!session?.user?.id || !session?.user?.email) return;
+        if (!session?.user?.email) {
+            console.error("User email is not available.");
+            return;
+        }
+
         setIsJoining(true);
         try {
-            await createPlayerSession({ userId: session.user.id, roomId: roomId });
+            const userProfile = await getUserByEmail(session.user.email);
+            if (!userProfile || !userProfile.playerId) {
+                throw new Error("Could not retrieve user profile from backend.");
+            }
+
+            await createPlayerSession({ userId: userProfile.playerId, roomId: roomId });
             await handleViewRoom(roomId);
+
         } catch (error) {
             console.error("Failed to join game session:", error);
         } finally {
@@ -146,13 +167,16 @@ export default function DashboardPage() {
     };
 
     const handleLeaveRoom = async (roomId: string) => {
-        if (!session?.user?.id || !session?.user?.email) return;
+        if (!session?.user?.email) {
+            console.error("User email is not available.");
+            return;
+        }
 
         try {
             await deletePlayerSession({ email: session.user.email, roomId: roomId });
 
             const lobbyData = await getPlayerSessionsByRoomId(roomId);
-            if (lobbyData.sessions.length === 0) {
+            if (!lobbyData.sessions || lobbyData.sessions.length === 0) {
                 await deleteRoom({ roomId: roomId });
             }
 
@@ -172,7 +196,7 @@ export default function DashboardPage() {
     };
 
     const confirmDeleteRoom = async () => {
-        if (!roomToDelete || !session?.user?.email) return;
+        if (!roomToDelete) return;
         try {
             await deleteRoom({ roomId: roomToDelete.id });
             setRooms(currentRooms => currentRooms.filter(room => room.id !== roomToDelete.id));
