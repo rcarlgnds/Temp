@@ -276,14 +276,15 @@ export default function DashboardPage() {
             })
           );
 
-          ws.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data);
-              console.log(data);
-            } catch (err) {
-              console.error("Parse error:", err);
-            }
-          };
+          // ws.onmessage = async(event) => {
+          //   try {
+          //     const data = JSON.parse(event.data);
+          //     console.log(data)
+          //     await getPlayerSessionsByRoomId(roomId);
+          //   } catch (err) {
+          //     console.error("Parse error:", err);
+          //   }
+          // };
         }
       }
 

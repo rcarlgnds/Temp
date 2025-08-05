@@ -31,6 +31,7 @@ import {
 import { PlayerSlot } from "./PlayerSlot";
 import { Room } from "@/services/room/types";
 import { LobbyData } from "@/services/player/types";
+import {getPlayerSessionsByRoomId} from "@/services/player";
 
 interface LobbyViewProps {
   room: Room | null;
@@ -66,6 +67,16 @@ export function LobbyView({
 
     socket.onopen = () => {
       console.log("WebSocket connected to server");
+    };
+
+    socket.onmessage = async(event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log(data)
+        await getPlayerSessionsByRoomId(room.id);
+      } catch (err) {
+        console.error("Parse error:", err);
+      }
     };
 
     // socket.onmessage = (event) => {
