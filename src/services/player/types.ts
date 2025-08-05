@@ -6,6 +6,7 @@ export interface ApiPlayer {
     skin?: string;
     money?: number;
     status?: 'Ready' | 'Not Ready' | string;
+    playerCode?: string;
 }
 export interface CreatePlayerSessionPayload {
     userId: string;

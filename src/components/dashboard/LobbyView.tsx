@@ -44,7 +44,7 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
     return (
         <>
             <Modal opened={opened} onClose={closeConfirm} title="Start Game" centered>
-                <Text>Are you sure you want to start the game? All players in the lobby will join.</Text>
+                <Text mt="md">Are you sure you want to start the game? All players in the lobby will join.</Text>
                 <Group justify="flex-end" mt="md">
                     <Button variant="default" onClick={closeConfirm}>Cancel</Button>
                     <Button color="teal" onClick={handleConfirmStart} leftSection={<IconPlayerPlay size={16} />}>
@@ -126,6 +126,7 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
                                     <Button
                                         variant="filled"
                                         color="red"
+                                        size="md"
                                         fullWidth
                                         onClick={() => onLeaveRoom(room.id)}
                                         leftSection={<IconLogout size={16} />}

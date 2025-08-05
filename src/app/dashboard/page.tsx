@@ -146,12 +146,19 @@ export default function DashboardPage() {
 
         try {
             const lobbyData = await getPlayerSessionsByRoomId(roomId);
-            const playersInSession = lobbyData.players || [];
+
+            const playersWithCode = (lobbyData.players || []).map(player => {
+                const sessionInfo = lobbyData.sessions.find(s => s.userId === player.playerId);
+                return {
+                    ...player,
+                    playerCode: sessionInfo ? sessionInfo.playerCode : undefined
+                };
+            });
 
             const roomWithSessionPlayers: Room = {
                 ...baseRoomData,
-                players: playersInSession,
-                playersCount: playersInSession.length,
+                players: playersWithCode,
+                playersCount: playersWithCode.length,
             };
             setSelectedRoom(roomWithSessionPlayers);
             setActiveView('lobby');
@@ -159,6 +166,7 @@ export default function DashboardPage() {
             console.error(`Failed to view room ${roomId}:`, error);
         }
     };
+
 
     const handleJoinGameInLobby = async (roomId: string) => {
         if (!session?.user?.email) {
@@ -174,6 +182,13 @@ export default function DashboardPage() {
             }
 
             await createPlayerSession({ userId: userProfile.playerId, roomId: roomId });
+
+            setRooms(prevRooms => prevRooms.map(room =>
+                room.id === roomId
+                    ? { ...room, playersCount: room.playersCount + 1 }
+                    : room
+            ));
+
             await handleViewRoom(roomId);
 
         } catch (error) {
@@ -192,17 +207,24 @@ export default function DashboardPage() {
         try {
             await deletePlayerSession({ email: session.user.email, roomId: roomId });
 
+            setRooms(prevRooms => prevRooms.map(room =>
+                room.id === roomId
+                    ? { ...room, playersCount: Math.max(0, room.playersCount - 1) }
+                    : room
+            ));
+
             const lobbyData = await getPlayerSessionsByRoomId(roomId);
             if (!lobbyData.sessions || lobbyData.sessions.length === 0) {
                 await deleteRoom({ roomId: roomId });
+                await fetchAllRooms();
             }
 
             handleBackToDashboard();
-            await fetchAllRooms();
         } catch (error) {
             console.error("Failed to leave room:", error);
         }
     };
+
 
     const handleDeleteRoom = (roomId: string) => {
         const room = rooms.find(r => r.id === roomId);
