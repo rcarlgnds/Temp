@@ -24,7 +24,8 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
 
     if (!room) return null;
 
-    const isUserInRoom = room.players.some(player => player.id === session?.user?.id);
+    // --- PERBAIKAN DI SINI ---
+    const isUserInRoom = room.players.some(player => player.playerId === session?.user?.id);
     const isHost = room.hostId === session?.user?.id;
     const canStartGame = room.players.length >= 2;
 
@@ -100,7 +101,8 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
                         <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
                             {Array.from({ length: room.maxPlayers }).map((_, index) => {
                                 const player = room.players[index] || null;
-                                return <PlayerSlot key={index} player={player} isHost={player?.id === room.hostId} />;
+                                // --- PERBAIKAN DI SINI ---
+                                return <PlayerSlot key={index} player={player} isHost={player?.playerId === room.hostId} />;
                             })}
                         </SimpleGrid>
                         <Divider my="md" />

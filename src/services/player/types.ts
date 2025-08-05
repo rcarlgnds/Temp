@@ -1,13 +1,12 @@
 export interface ApiPlayer {
-    id: string;
+    playerId: string;
     username: string;
     email: string;
-    skin: string;
-    money: number;
-    status: 'Ready' | 'Not Ready' | string;
-    isHost?: boolean;
+    score: number;
+    skin?: string;
+    money?: number;
+    status?: 'Ready' | 'Not Ready' | string;
 }
-
 export interface CreatePlayerSessionPayload {
     userId: string;
     roomId: string;

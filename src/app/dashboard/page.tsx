@@ -230,7 +230,7 @@ export default function DashboardPage() {
             <InteractiveBackground colorScheme={colorScheme} />
             <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create a New Room</Text>} radius="lg" centered>
                 <Stack>
-                    <Text>A new room will be created with your name. Are you sure?</Text>
+                    <Text mt="md">A new room will be created. Are you sure?</Text>
                     <Button
                         fullWidth mt="md" radius="md" variant="gradient"
                         gradient={{ from: '#DAA520', to: '#3C2A21' }}
@@ -244,6 +244,7 @@ export default function DashboardPage() {
                 <form onSubmit={handleJoinById}>
                     <Stack>
                         <TextInput
+                            mt="md"
                             label="Room ID"
                             placeholder="Enter the Room ID"
                             value={joinRoomId}
@@ -265,7 +266,7 @@ export default function DashboardPage() {
             </Modal>
             <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title={<Text fw={700}>Confirm Deletion</Text>} radius="lg" centered>
                 <Stack>
-                    <Text>Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
+                    <Text mt="md">Are you sure you want to delete room "{roomToDelete?.name}"? This action is permanent.</Text>
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" onClick={closeDeleteModal}>Cancel</Button>
                         <Button color="red" leftSection={<IconTrash size={16}/>} onClick={confirmDeleteRoom}>

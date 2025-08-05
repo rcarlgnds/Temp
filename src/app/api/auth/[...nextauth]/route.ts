@@ -63,26 +63,15 @@ export const authOptions: AuthOptions = {
                 password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) {
-                    return null;
-                }
+                if (!credentials?.email || !credentials?.password) return null;
                 try {
                     const res = await fetch("http://localhost:6969/api/users/login", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            email: credentials.email,
-                            password: credentials.password,
-                        }),
+                        body: JSON.stringify({ email: credentials.email, password: credentials.password }),
                     });
-
-                    if (!res.ok) {
-                        console.error("Backend login failed:", await res.text());
-                        return null;
-                    }
-
+                    if (!res.ok) return null;
                     const user = await res.json();
-                    // Ensure the returned object from your API matches this structure
                     if (user && user.playerId) {
                         return {
                             id: user.playerId,
@@ -92,7 +81,6 @@ export const authOptions: AuthOptions = {
                     }
                     return null;
                 } catch (e) {
-                    console.error("Error during authorization:", e);
                     return null;
                 }
             },
@@ -101,14 +89,11 @@ export const authOptions: AuthOptions = {
             clientId: azureADClientId,
             clientSecret: azureADClientSecret,
             tenantId: azureADTenantId,
-            authorization: {
-                params: { scope: "openid email profile User.Read offline_access" },
-            },
+            authorization: { params: { scope: "openid email profile User.Read offline_access" } },
             httpOptions: { timeout: 10000 },
         }),
     ],
     callbacks: {
-
         async signIn({ user, account }) {
             if (account?.provider !== "credentials" && user.email) {
                 try {
@@ -122,19 +107,37 @@ export const authOptions: AuthOptions = {
                     });
                 } catch (error) {
                     console.error("Error registering user during signIn:", error);
-                    // Decide if a failed registration should prevent sign-in
-                    // return false;
                 }
             }
             return true;
         },
         async jwt({ token, user, account }) {
             if (account && user) {
+                let finalUser = user;
+
+                if (account.provider !== 'credentials' && user.email) {
+                    try {
+                        const res = await fetch(`http://localhost:6969/api/users/get-player-by-email?Email=${user.email}`);
+                        if (res.ok) {
+                            const internalUserData = await res.json();
+                            if (internalUserData.player && internalUserData.player.playerId) {
+                                finalUser = {
+                                    id: internalUserData.player.playerId,
+                                    name: internalUserData.player.username,
+                                    email: user.email,
+                                };
+                            }
+                        }
+                    } catch (e) {
+                        console.error("JWT CALLBACK: Failed to fetch internal user", e);
+                    }
+                }
+
                 return {
                     accessToken: account.id_token,
                     accessTokenExpires: account.expires_at ? account.expires_at * 1000 : 0,
                     refreshToken: account.refresh_token,
-                    user,
+                    user: finalUser,
                 };
             }
 
@@ -145,7 +148,7 @@ export const authOptions: AuthOptions = {
             return refreshAccessToken(token);
         },
         async session({ session, token }) {
-            session.user = token.user;
+            session.user = token.user as any;
             session.accessToken = token.accessToken;
             session.error = token.error;
             return session;
