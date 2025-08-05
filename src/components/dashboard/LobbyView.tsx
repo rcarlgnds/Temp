@@ -30,33 +30,32 @@ import {
 } from "@tabler/icons-react";
 import { PlayerSlot } from "./PlayerSlot";
 import { Room } from "@/services/room/types";
-import { LobbyData } from "@/services/player/types";
-import {getPlayerSessionsByRoomId} from "@/services/player";
+import { getPlayerSessionsByRoomId } from "@/services/player";
 
 interface LobbyViewProps {
   room: Room | null;
-  setRoom: (room: Room | null) => void;
   onBack: () => void;
-  onJoinGame: (roomId: string, ws: WebSocket | null) => Promise<void>;
+  onJoinGame: (roomId: string) => Promise<void>;
   onLeaveRoom: (roomId: string) => Promise<void>;
   onStartGame: (roomId: string) => Promise<void>;
+  onRefreshLobby: (roomId: string) => void;
   isJoining: boolean;
 }
 
 export function LobbyView({
-  room,
-  setRoom,
-  onBack,
-  onJoinGame,
-  onLeaveRoom,
-  onStartGame,
-  isJoining,
-}: LobbyViewProps) {
+                            room,
+                            onBack,
+                            onJoinGame,
+                            onLeaveRoom,
+                            onStartGame,
+                            onRefreshLobby,
+                            isJoining,
+                          }: LobbyViewProps) {
   const { data: session } = useSession();
   const [ws, setWs] = useState<WebSocket | null>(null);
 
   const [opened, { open: openConfirm, close: closeConfirm }] =
-    useDisclosure(false);
+      useDisclosure(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -69,53 +68,38 @@ export function LobbyView({
       console.log("WebSocket connected to server");
     };
 
-    socket.onmessage = async(event) => {
+    socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log(data)
-        await getPlayerSessionsByRoomId(room.id);
+        console.log("Received WebSocket message:", data);
+        if (data.message === 'update room' && room?.id) {
+          console.log("Refreshing lobby due to WebSocket message...");
+          onRefreshLobby(room.id);
+        }
       } catch (err) {
         console.error("Parse error:", err);
       }
     };
 
-    // socket.onmessage = (event) => {
-    //   try {
-    //     const data = JSON.parse(event.data);
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
 
-    //     if (data.type === "lobby-update" && data.room?.roomId === room.id) {
-    //       const updatedRoom: Room = {
-    //         ...room,
-    //         players: data.players || [],
-    //         playersCount: (data.players || []).length,
-    //       };
-    //       setRoom(updatedRoom);
-    //     }
-    //   } catch (err) {
-    //     console.error("Failed to parse WebSocket message:", err);
-    //   }
-    // };
-
-    // socket.onclose = () => {
-    //   console.log("WebSocket connection closed");
-    // };
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
 
     setWs(socket);
 
-    // return () => {
-    //   if (
-    //     socket.readyState === WebSocket.OPEN ||
-    //     socket.readyState === WebSocket.CONNECTING
-    //   ) {
-    //     socket.close();
-    //   }
-    // };
-  }, [room?.id, session?.user?.id, setRoom]);
+    return () => {
+      socket.close();
+    }
+  }, [room?.id, session?.user?.id, onRefreshLobby]);
 
   if (!room) return null;
 
   const isUserInRoom = room.players.some(
-    (player) => player.playerId === session?.user?.id
+      (player) => player.playerId === session?.user?.id
   );
   const isHost = room.hostId === session?.user?.id;
   const canStartGame = room.players.length >= 2;
@@ -133,163 +117,163 @@ export function LobbyView({
   };
 
   return (
-    <>
-      <Modal opened={opened} onClose={closeConfirm} title="Start Game" centered>
-        <Text mt="md">
-          Are you sure you want to start the game? All players in the lobby will
-          join.
-        </Text>
-        <Group justify="flex-end" mt="md">
-          <Button variant="default" onClick={closeConfirm}>
-            Cancel
-          </Button>
-          <Button
-            color="teal"
-            onClick={handleConfirmStart}
-            leftSection={<IconPlayerPlay size={16} />}
-          >
-            Start Now
-          </Button>
-        </Group>
-      </Modal>
+      <>
+        <Modal opened={opened} onClose={closeConfirm} title="Start Game" centered>
+          <Text mt="md">
+            Are you sure you want to start the game? All players in the lobby will
+            join.
+          </Text>
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={closeConfirm}>
+              Cancel
+            </Button>
+            <Button
+                color="teal"
+                onClick={handleConfirmStart}
+                leftSection={<IconPlayerPlay size={16} />}
+            >
+              Start Now
+            </Button>
+          </Group>
+        </Modal>
 
-      <Container
-        fluid
-        py="xl"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "calc(100vh - 70px)",
-        }}
-      >
-        <Paper
-          p="xl"
-          radius="xl"
-          shadow="lg"
-          withBorder
-          style={(theme: MantineTheme) => ({
-            width: "100%",
-            maxWidth: 1200,
-            backgroundColor: `rgba(26, 28, 30, 0.7)`,
-            backdropFilter: "blur(16px)",
-            borderColor: theme.colors.dark[4],
-          })}
+        <Container
+            fluid
+            py="xl"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "calc(100vh - 70px)",
+            }}
         >
-          <Stack>
-            <Group justify="space-between" align="flex-start">
-              <Button
-                variant="subtle"
-                color="gray"
-                leftSection={<IconArrowLeft size={16} />}
-                onClick={onBack}
-              >
-                Back to Dashboard
-              </Button>
-              <Tooltip
-                label={copied ? "ID Copied!" : "Click title to copy Room ID"}
-                withArrow
-              >
-                <Group
-                  gap="xs"
-                  onClick={handleCopy}
-                  style={{ cursor: "pointer" }}
-                >
-                  <Title order={4} c={copied ? "teal.5" : "medievalGold.4"}>
-                    {room.name}
-                  </Title>
-                  {copied ? (
-                    <IconCheck size={20} color="teal" />
-                  ) : (
-                    <IconCopy size={20} />
-                  )}
-                </Group>
-              </Tooltip>
-            </Group>
-
-            <Stack gap="xs" mt="sm" ml="md">
-              <Group justify="space-between">
-                <Group gap="xs" c="dimmed">
-                  <IconUserCircle size={16} />
-                  <Text size="xs">Host ID: {room.hostId}</Text>
-                </Group>
-                <Badge
-                  color={room.status === "waiting" ? "yellow" : "green"}
-                  variant="light"
-                  leftSection={<IconActivity size={14} />}
-                >
-                  {room.status}
-                </Badge>
-              </Group>
-              <Group gap="xs" c="dimmed">
-                <IconFileDescription size={16} />
-                <Text size="xs">Topic ID: {room.topicId}</Text>
-              </Group>
-            </Stack>
-
-            <Divider my="sm" />
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
-              {Array.from({ length: room.maxPlayers }).map((_, index) => {
-                const player = room.players[index] || null;
-                return (
-                  <PlayerSlot
-                    key={index}
-                    player={player}
-                    isHost={player?.playerId === room.hostId}
-                  />
-                );
+          <Paper
+              p="xl"
+              radius="xl"
+              shadow="lg"
+              withBorder
+              style={(theme: MantineTheme) => ({
+                width: "100%",
+                maxWidth: 1200,
+                backgroundColor: `rgba(26, 28, 30, 0.7)`,
+                backdropFilter: "blur(16px)",
+                borderColor: theme.colors.dark[4],
               })}
-            </SimpleGrid>
-            <Divider my="md" />
+          >
+            <Stack>
+              <Group justify="space-between" align="flex-start">
+                <Button
+                    variant="subtle"
+                    color="gray"
+                    leftSection={<IconArrowLeft size={16} />}
+                    onClick={onBack}
+                >
+                  Back to Dashboard
+                </Button>
+                <Tooltip
+                    label={copied ? "ID Copied!" : "Click title to copy Room ID"}
+                    withArrow
+                >
+                  <Group
+                      gap="xs"
+                      onClick={handleCopy}
+                      style={{ cursor: "pointer" }}
+                  >
+                    <Title order={4} c={copied ? "teal.5" : "medievalGold.4"}>
+                      {room.name}
+                    </Title>
+                    {copied ? (
+                        <IconCheck size={20} color="teal" />
+                    ) : (
+                        <IconCopy size={20} />
+                    )}
+                  </Group>
+                </Tooltip>
+              </Group>
 
-            <Stack mt="md" gap="md">
-              {isUserInRoom ? (
-                <>
-                  {isHost && (
-                    <Button
-                      variant="gradient"
-                      gradient={{ from: "teal", to: "lime" }}
-                      size="md"
-                      fullWidth
-                      disabled={!canStartGame}
-                      onClick={openConfirm}
-                      leftSection={<IconPlayerPlay size={16} />}
-                    >
-                      Start Game
-                    </Button>
-                  )}
-                  <Button
-                    variant="filled"
-                    color="red"
-                    size="md"
-                    fullWidth
-                    onClick={() => onLeaveRoom(room.id)}
-                    leftSection={<IconLogout size={16} />}
+              <Stack gap="xs" mt="sm" ml="md">
+                <Group justify="space-between">
+                  <Group gap="xs" c="dimmed">
+                    <IconUserCircle size={16} />
+                    <Text size="xs">Host ID: {room.hostId}</Text>
+                  </Group>
+                  <Badge
+                      color={room.status === "waiting" ? "yellow" : "green"}
+                      variant="light"
+                      leftSection={<IconActivity size={14} />}
                   >
-                    Leave Room
-                  </Button>
-                </>
-              ) : (
-                <Group justify="flex-end">
-                  <Button
-                    variant="gradient"
-                    gradient={{ from: "yellow", to: "orange" }}
-                    size="md"
-                    w={200}
-                    onClick={() => onJoinGame(room.id, ws)}
-                    loading={isJoining}
-                    disabled={room.status !== "waiting"}
-                  >
-                    {room.status === "waiting"
-                      ? "Join Game"
-                      : "Game In Progress"}
-                  </Button>
+                    {room.status}
+                  </Badge>
                 </Group>
-              )}
+                <Group gap="xs" c="dimmed">
+                  <IconFileDescription size={16} />
+                  <Text size="xs">Topic ID: {room.topicId}</Text>
+                </Group>
+              </Stack>
+
+              <Divider my="sm" />
+              <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
+                {Array.from({ length: room.maxPlayers }).map((_, index) => {
+                  const player = room.players[index] || null;
+                  return (
+                      <PlayerSlot
+                          key={index}
+                          player={player}
+                          isHost={player?.playerId === room.hostId}
+                      />
+                  );
+                })}
+              </SimpleGrid>
+              <Divider my="md" />
+
+              <Stack mt="md" gap="md">
+                {isUserInRoom ? (
+                    <>
+                      {isHost && (
+                          <Button
+                              variant="gradient"
+                              gradient={{ from: "teal", to: "lime" }}
+                              size="md"
+                              fullWidth
+                              disabled={!canStartGame}
+                              onClick={openConfirm}
+                              leftSection={<IconPlayerPlay size={16} />}
+                          >
+                            Start Game
+                          </Button>
+                      )}
+                      <Button
+                          variant="filled"
+                          color="red"
+                          size="md"
+                          fullWidth
+                          onClick={() => onLeaveRoom(room.id)}
+                          leftSection={<IconLogout size={16} />}
+                      >
+                        Leave Room
+                      </Button>
+                    </>
+                ) : (
+                    <Group justify="flex-end">
+                      <Button
+                          variant="gradient"
+                          gradient={{ from: "yellow", to: "orange" }}
+                          size="md"
+                          w={200}
+                          onClick={() => onJoinGame(room.id)}
+                          loading={isJoining}
+                          disabled={room.status !== "waiting"}
+                      >
+                        {room.status === "waiting"
+                            ? "Join Game"
+                            : "Game In Progress"}
+                      </Button>
+                    </Group>
+                )}
+              </Stack>
             </Stack>
-          </Stack>
-        </Paper>
-      </Container>
-    </>
+          </Paper>
+        </Container>
+      </>
   );
 }
