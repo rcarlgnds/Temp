@@ -45,8 +45,25 @@ export default function DashboardPage() {
     const fetchAllRooms = async () => {
         try {
             setLoadingRooms(true);
-            const fetchedRooms = await getAllRooms();
-            setRooms(fetchedRooms);
+            const baseRooms = await getAllRooms();
+
+            const roomsWithSessionData = await Promise.all(
+                baseRooms.map(async (room) => {
+                    try {
+                        const lobbyData = await getPlayerSessionsByRoomId(room.id);
+                        const playersInSession = lobbyData.players || [];
+                        return {
+                            ...room,
+                            players: playersInSession,
+                            playersCount: playersInSession.length,
+                        };
+                    } catch (error) {
+                        return { ...room, players: [], playersCount: 0 };
+                    }
+                })
+            );
+
+            setRooms(roomsWithSessionData);
         } catch (error) {
             console.error(error);
         } finally {
