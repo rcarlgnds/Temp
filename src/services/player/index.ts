@@ -7,7 +7,7 @@ import {
     UpdatePlayerStatusPayload, DeletePlayerSessionPayload, LobbyData, LobbyApiResponse
 } from './types';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/playerSession`;
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/playerSession`;
 
 export const createPlayerSession = async (payload: CreatePlayerSessionPayload): Promise<PlayerSessionInfo> => {
     try {
@@ -40,7 +40,7 @@ export const loginPlayer = async (payload: LoginPlayerPayload): Promise<{ player
 };
 
 export const updatePlayerStatus = async (payload: UpdatePlayerStatusPayload): Promise<any> => {
-    const PLAYER_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/players`;
+    const PLAYER_API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/players`;
     try {
         const response = await axios.post(`${PLAYER_API_URL}/update-status`, payload);
         return response.data;

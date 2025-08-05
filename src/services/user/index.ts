@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { AddUserPayload, LoginPayload, ApiUser } from './types';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/users`;
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/users`;
 
 export const addUser = async (payload: AddUserPayload): Promise<ApiUser> => {
     try {

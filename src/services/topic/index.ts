@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { CreateTopicPayload, ApiTopic } from './types';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/topic`;
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/topic`;
 
 export const createTopic = async (payload: CreateTopicPayload): Promise<ApiTopic> => {
     try {

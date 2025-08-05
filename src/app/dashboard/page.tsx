@@ -168,29 +168,71 @@ export default function DashboardPage() {
     };
 
 
-    const handleJoinGameInLobby = async (roomId: string) => {
-        if (!session?.user?.email) {
-            console.error("User email is not available.");
-            return;
-        }
+    // const handleJoinGameInLobby = async (roomId: string) => {
+    //     if (!session?.user?.email) {
+    //         console.error("User email is not available.");
+    //         return;
+    //     }
+    //
+    //     setIsJoining(true);
+    //     try {
+    //         const userProfile = await getUserByEmail(session.user.email);
+    //         if (!userProfile || !userProfile.playerId) {
+    //             throw new Error("Could not retrieve user profile from backend.");
+    //         }
+    //
+    //         await createPlayerSession({ userId: userProfile.playerId, roomId: roomId });
+    //
+    //         setRooms(prevRooms => prevRooms.map(room =>
+    //             room.id === roomId
+    //                 ? { ...room, playersCount: room.playersCount + 1 }
+    //                 : room
+    //         ));
+    //
+    //         await handleViewRoom(roomId);
+    //
+    //     } catch (error) {
+    //         console.error("Failed to join game session:", error);
+    //     } finally {
+    //         setIsJoining(false);
+    //     }
+    // };
+    //
+    // const handleLeaveRoom = async (roomId: string) => {
+    //     if (!session?.user?.email) {
+    //         console.error("User email is not available.");
+    //         return;
+    //     }
+    //
+    //     try {
+    //         await deletePlayerSession({ email: session.user.email, roomId: roomId });
+    //
+    //         setRooms(prevRooms => prevRooms.map(room =>
+    //             room.id === roomId
+    //                 ? { ...room, playersCount: Math.max(0, room.playersCount - 1) }
+    //                 : room
+    //         ));
+    //
+    //         const lobbyData = await getPlayerSessionsByRoomId(roomId);
+    //         if (!lobbyData.sessions || lobbyData.sessions.length === 0) {
+    //             await deleteRoom({ roomId: roomId });
+    //             await fetchAllRooms();
+    //         }
+    //
+    //         handleBackToDashboard();
+    //     } catch (error) {
+    //         console.error("Failed to leave room:", error);
+    //     }
+    // };
 
+    const handleJoinGameInLobby = async (roomId: string) => {
+        if (!session?.user?.email) return;
         setIsJoining(true);
         try {
             const userProfile = await getUserByEmail(session.user.email);
-            if (!userProfile || !userProfile.playerId) {
-                throw new Error("Could not retrieve user profile from backend.");
-            }
+            if (!userProfile?.playerId) throw new Error("User profile not found");
 
             await createPlayerSession({ userId: userProfile.playerId, roomId: roomId });
-
-            setRooms(prevRooms => prevRooms.map(room =>
-                room.id === roomId
-                    ? { ...room, playersCount: room.playersCount + 1 }
-                    : room
-            ));
-
-            await handleViewRoom(roomId);
-
         } catch (error) {
             console.error("Failed to join game session:", error);
         } finally {
@@ -199,32 +241,15 @@ export default function DashboardPage() {
     };
 
     const handleLeaveRoom = async (roomId: string) => {
-        if (!session?.user?.email) {
-            console.error("User email is not available.");
-            return;
-        }
-
+        if (!session?.user?.email) return;
         try {
             await deletePlayerSession({ email: session.user.email, roomId: roomId });
-
-            setRooms(prevRooms => prevRooms.map(room =>
-                room.id === roomId
-                    ? { ...room, playersCount: Math.max(0, room.playersCount - 1) }
-                    : room
-            ));
-
-            const lobbyData = await getPlayerSessionsByRoomId(roomId);
-            if (!lobbyData.sessions || lobbyData.sessions.length === 0) {
-                await deleteRoom({ roomId: roomId });
-                await fetchAllRooms();
-            }
-
             handleBackToDashboard();
+            fetchAllRooms();
         } catch (error) {
             console.error("Failed to leave room:", error);
         }
     };
-
 
     const handleDeleteRoom = (roomId: string) => {
         const room = rooms.find(r => r.id === roomId);
@@ -347,6 +372,7 @@ export default function DashboardPage() {
                     ) : (
                         <LobbyView
                             room={selectedRoom}
+                            setRoom={setSelectedRoom}
                             onBack={handleBackToDashboard}
                             onJoinGame={handleJoinGameInLobby}
                             onLeaveRoom={handleLeaveRoom}

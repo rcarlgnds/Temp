@@ -9,7 +9,7 @@ import {
     RoomStatus, DeleteRoomPayload
 } from './types';
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/rooms`;
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/rooms`;
 
 export const getAllRooms = async (): Promise<Room[]> => {
     try {

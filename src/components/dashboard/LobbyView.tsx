@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { useSession } from "next-auth/react";
 import { Container, Paper, Stack, Button, Group, Badge, Divider, SimpleGrid, MantineTheme, Modal, Text, Tooltip, Title } from "@mantine/core";
 import { useDisclosure } from '@mantine/hooks';
 import { IconArrowLeft, IconCopy, IconCheck, IconLogout, IconPlayerPlay, IconUserCircle, IconFileDescription, IconActivity } from '@tabler/icons-react';
 import { PlayerSlot } from './PlayerSlot';
 import { Room } from "@/services/room/types";
+import {useSocket} from "@/context/SocketContext";
+import {LobbyData} from "@/services/player/types";
 
 interface LobbyViewProps {
     room: Room | null;
+    setRoom: (room: Room | null) => void;
     onBack: () => void;
     onJoinGame: (roomId: string) => Promise<void>;
     onLeaveRoom: (roomId: string) => Promise<void>;
@@ -17,14 +20,40 @@ interface LobbyViewProps {
     isJoining: boolean;
 }
 
-export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, isJoining }: LobbyViewProps) {
+export function LobbyView({ room, setRoom, onBack, onJoinGame, onLeaveRoom, onStartGame, isJoining }: LobbyViewProps) {
     const { data: session } = useSession();
+    const socket = useSocket();
+
     const [opened, { open: openConfirm, close: closeConfirm }] = useDisclosure(false);
     const [copied, setCopied] = useState(false);
 
+    useEffect(() => {
+       if(!socket || ! room) return;
+
+       socket.emit('join-lobby', room.id);
+
+       const handleLobbyUpdate = (lobbyData: LobbyData) => {
+            console.log('Received lobby update:', lobbyData);
+            if (room && lobbyData.room.roomId === room.id) {
+                const updatedRoom: Room = {
+                    ...room,
+                    players: lobbyData.players || [],
+                    playersCount: (lobbyData.players || []).length
+                };
+                setRoom(updatedRoom);
+            }
+        };
+
+        socket.on('lobby-update', handleLobbyUpdate);
+
+        return () => {
+            socket.off('lobby-update', handleLobbyUpdate);
+        };
+    }, [socket, room, setRoom]);
+
+
     if (!room) return null;
 
-    // --- PERBAIKAN DI SINI ---
     const isUserInRoom = room.players.some(player => player.playerId === session?.user?.id);
     const isHost = room.hostId === session?.user?.id;
     const canStartGame = room.players.length >= 2;
@@ -101,7 +130,6 @@ export function LobbyView({ room, onBack, onJoinGame, onLeaveRoom, onStartGame, 
                         <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg">
                             {Array.from({ length: room.maxPlayers }).map((_, index) => {
                                 const player = room.players[index] || null;
-                                // --- PERBAIKAN DI SINI ---
                                 return <PlayerSlot key={index} player={player} isHost={player?.playerId === room.hostId} />;
                             })}
                         </SimpleGrid>
