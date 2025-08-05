@@ -30,7 +30,7 @@ export function LobbyView({ room, setRoom, onBack, onJoinGame, onLeaveRoom, onSt
     useEffect(() => {
        if(!socket || ! room) return;
 
-       socket.emit('join-lobby', room.id);
+       socket.emit('join-lobby', room.id, session?.user?.id);
 
        const handleLobbyUpdate = (lobbyData: LobbyData) => {
             console.log('Received lobby update:', lobbyData);
