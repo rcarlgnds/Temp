@@ -43,7 +43,6 @@ import { RoomCard } from "@/components/dashboard/RoomCard";
 import { LobbyView } from "@/components/dashboard/LobbyView";
 import { Room } from "@/services/room/types";
 import { getUserByEmail } from "@/services/user";
-import { ApiPlayer } from "@/services/player/types";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -199,32 +198,22 @@ export default function DashboardPage() {
     }
   };
 
-  const handleJoinGameInLobby = async (roomId: string) => {
-    if (!session?.user?.email) return;
+  const handleJoinGameInLobby = async (
+      roomId: string,
+      ws: WebSocket | null
+  ) => {
+    if (!session?.user?.id) return;
     setIsJoining(true);
     try {
-      const userProfile = await getUserByEmail(session.user.email);
-      if (!userProfile || !userProfile.playerId) {
-        throw new Error("Could not retrieve user profile.");
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(
+            JSON.stringify({
+              eventType: "join-lobby",
+              roomId: roomId,
+              userId: session.user.id,
+            })
+        );
       }
-
-      await createPlayerSession({ userId: userProfile.playerId, roomId: roomId });
-
-      const optimisticPlayer: ApiPlayer = {
-        playerId: userProfile.playerId,
-        username: userProfile.username,
-        email: userProfile.email,
-        score: 0,
-      };
-      setSelectedRoom(currentRoom => {
-        if (!currentRoom) return null;
-        return {
-          ...currentRoom,
-          players: [...currentRoom.players, optimisticPlayer],
-          playersCount: currentRoom.players.length + 1,
-        };
-      });
-
     } catch (error) {
       console.error("Failed to join game session:", error);
     } finally {
@@ -469,6 +458,7 @@ export default function DashboardPage() {
                     onStartGame={handleStartGame}
                     onRefreshLobby={refreshLobbyData}
                     isJoining={isJoining}
+                    setIsJoining={setIsJoining}
                 />
             )}
           </AppShell.Main>

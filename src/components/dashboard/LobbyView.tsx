@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
   Container,
@@ -30,16 +30,16 @@ import {
 } from "@tabler/icons-react";
 import { PlayerSlot } from "./PlayerSlot";
 import { Room } from "@/services/room/types";
-import { getPlayerSessionsByRoomId } from "@/services/player";
 
 interface LobbyViewProps {
   room: Room | null;
   onBack: () => void;
-  onJoinGame: (roomId: string) => Promise<void>;
+  onJoinGame: (roomId: string, ws: WebSocket | null) => Promise<void>;
   onLeaveRoom: (roomId: string) => Promise<void>;
   onStartGame: (roomId: string) => Promise<void>;
   onRefreshLobby: (roomId: string) => void;
   isJoining: boolean;
+  setIsJoining: (isJoining: boolean) => void;
 }
 
 export function LobbyView({
@@ -50,12 +50,11 @@ export function LobbyView({
                             onStartGame,
                             onRefreshLobby,
                             isJoining,
+                            setIsJoining,
                           }: LobbyViewProps) {
   const { data: session } = useSession();
   const [ws, setWs] = useState<WebSocket | null>(null);
-
-  const [opened, { open: openConfirm, close: closeConfirm }] =
-      useDisclosure(false);
+  const [opened, { open: openConfirm, close: closeConfirm }] = useDisclosure(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -64,16 +63,14 @@ export function LobbyView({
     const wsUrl = `ws://localhost:6969/ws/general?roomId=${room.id}&userId=${session.user.id}`;
     const socket = new WebSocket(wsUrl);
 
-    socket.onopen = () => {
-      console.log("WebSocket connected to server");
-    };
+    socket.onopen = () => console.log("WebSocket connected");
+    socket.onclose = () => console.log("WebSocket disconnected");
+    socket.onerror = (error) => console.error("WebSocket error:", error);
 
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("Received WebSocket message:", data);
         if (data.message === 'update room' && room?.id) {
-          console.log("Refreshing lobby due to WebSocket message...");
           onRefreshLobby(room.id);
         }
       } catch (err) {
@@ -81,19 +78,13 @@ export function LobbyView({
       }
     };
 
-    socket.onclose = () => {
-      console.log("WebSocket disconnected");
-    };
-
-    socket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-    };
-
     setWs(socket);
 
     return () => {
-      socket.close();
-    }
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+    };
   }, [room?.id, session?.user?.id, onRefreshLobby]);
 
   if (!room) return null;
@@ -103,6 +94,12 @@ export function LobbyView({
   );
   const isHost = room.hostId === session?.user?.id;
   const canStartGame = room.players.length >= 2;
+
+  useEffect(() => {
+    if (isUserInRoom) {
+      setIsJoining(false);
+    }
+  }, [isUserInRoom, setIsJoining]);
 
   const handleConfirmStart = () => {
     onStartGame(room.id);
@@ -120,13 +117,10 @@ export function LobbyView({
       <>
         <Modal opened={opened} onClose={closeConfirm} title="Start Game" centered>
           <Text mt="md">
-            Are you sure you want to start the game? All players in the lobby will
-            join.
+            Are you sure? All players in the lobby will join.
           </Text>
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={closeConfirm}>
-              Cancel
-            </Button>
+            <Button variant="default" onClick={closeConfirm}>Cancel</Button>
             <Button
                 color="teal"
                 onClick={handleConfirmStart}
@@ -260,7 +254,7 @@ export function LobbyView({
                           gradient={{ from: "yellow", to: "orange" }}
                           size="md"
                           w={200}
-                          onClick={() => onJoinGame(room.id)}
+                          onClick={() => onJoinGame(room.id, ws)}
                           loading={isJoining}
                           disabled={room.status !== "waiting"}
                       >
