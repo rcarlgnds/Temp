@@ -16,7 +16,7 @@ import {
   Text,
   Center,
   Loader,
-  TextInput,
+  TextInput, Box,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
@@ -44,10 +44,12 @@ import { LobbyView } from "@/components/dashboard/LobbyView";
 import { Room } from "@/services/room/types";
 import { getUserByEmail } from "@/services/user";
 import Email from "next-auth/providers/email";
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const { colorScheme } = useMantineColorScheme();
+  const router = useRouter();
 
   const [activeView, setActiveView] = useState("dashboard");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -137,6 +139,28 @@ export default function DashboardPage() {
       fetchAllRooms();
     }
   }, [status]);
+
+  if (status === "loading") {
+    return (
+        <>
+          <InteractiveBackground colorScheme={colorScheme} />
+          <Box style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            <Loader color="yellow" size="xl" />
+          </Box>
+        </>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    useEffect(() => {
+      router.push('/');
+    }, [router]);
+    return (
+        <Box style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <Loader color="yellow" size="xl" />
+        </Box>
+    );
+  }
 
   const handleJoinById = async (e: React.FormEvent) => {
     e.preventDefault();
