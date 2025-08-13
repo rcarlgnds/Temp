@@ -6,7 +6,10 @@ import { theme } from "../../theme";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <MantineProvider theme={theme} defaultColorScheme="dark">
+      <MantineProvider
+          theme={theme}
+          forceColorScheme="dark"
+      >
         {/*<WebSocketProvider>*/}
       <AuthProvider>{children}</AuthProvider>
        {/*</WebSocketProvider>*/}
