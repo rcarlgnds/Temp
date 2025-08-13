@@ -1,5 +1,11 @@
 import { ApiPlayer } from '../player/types';
 
+export interface GetAllRoomsApiItem {
+    room: ApiRoom;
+    topicName: string;
+    topicDescription: string;
+}
+
 export interface CreateRoomPayload {
     Room: {
         RoomId: string;
@@ -25,24 +31,25 @@ export interface DeleteRoomPayload {
 
 export interface ApiRoom {
     id: string;
-    topicId: string;
     roomId: string;
     hostId: string;
+    topicId: string;
+    status: string;
     maxPlayers: number;
     players: ApiPlayer[];
-    createdAt: Date;
-    status: string;
 }
 
 export interface Room {
     id: string;
-    topicId: string;
     name: string;
-    playersCount: number;
+    hostId: string;
+    topicId: string;
+    status: string;
     maxPlayers: number;
     players: ApiPlayer[];
-    hostId: string;
-    status: string;
+    playersCount: number;
+    topicName: string;
+    topicDescription: string;
 }
 
 export interface RoomLeaderboard {

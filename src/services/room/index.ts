@@ -6,31 +6,37 @@ import {
     ModifyPlayerInRoomPayload,
     UpdateRoomStatusPayload,
     RoomLeaderboard,
-    RoomStatus, DeleteRoomPayload
+    RoomStatus, DeleteRoomPayload, GetAllRoomsApiItem
 } from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/rooms`;
 
 export const getAllRooms = async (): Promise<Room[]> => {
     try {
-        const response = await axios.get<{ message: string, data: ApiRoom[] }>(`${API_URL}/get-all-rooms`);
-        if (!response.data || !response.data.data) return [];
+        const response = await axios.get<{ message: string, data: GetAllRoomsApiItem[] }>(`${API_URL}/get-all-rooms`);
 
-        return response.data.data.map((apiRoom): Room => ({
-            id: apiRoom.id,
-            topicId: apiRoom.topicId,
-            name: apiRoom.roomId,
-            playersCount: apiRoom.players.length,
-            maxPlayers: apiRoom.maxPlayers,
-            players: apiRoom.players,
-            hostId: apiRoom.hostId,
-            status: apiRoom.status
+        if (!response.data || !response.data.data) {
+            return [];
+        }
+
+        return response.data.data.map((item): Room => ({
+            id: item.room.id,
+            name: item.room.roomId,
+            hostId: item.room.hostId,
+            topicId: item.room.topicId,
+            status: item.room.status,
+            maxPlayers: item.room.maxPlayers,
+            players: item.room.players || [],
+            playersCount: (item.room.players || []).length,
+            topicName: item.topicName,
+            topicDescription: item.topicDescription,
         }));
     } catch (error) {
         console.error("Failed to fetch rooms:", error);
         throw new Error("Could not fetch rooms.");
     }
 };
+
 
 export const createRoom = async (payload: CreateRoomPayload): Promise<ApiRoom> => {
     try {

@@ -204,7 +204,7 @@ export function LobbyView({
                 </Group>
                 <Group gap="xs" c="dimmed">
                   <IconFileDescription size={16} />
-                  <Text size="xs">Topic ID: {room.topicId}</Text>
+                  <Text size="xs">Topic Name: {room.topicName}</Text>
                 </Group>
               </Stack>
 

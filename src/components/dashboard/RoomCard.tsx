@@ -63,7 +63,7 @@ export function RoomCard({ room, onJoin, onDelete }: RoomCardProps) {
                                     lineClamp={2}
                                     c={copied ? 'teal.5' : 'medievalGold.4'}
                                 >
-                                    {room.id}
+                                    {room.name}
                                 </Title>
                                 {copied ? <IconCheck size={20} color="teal" /> : <IconCopy size={20} />}
                             </Group>
@@ -92,7 +92,7 @@ export function RoomCard({ room, onJoin, onDelete }: RoomCardProps) {
                         </Group>
                         <Group gap="xs" c="dimmed">
                             <IconFileDescription size={16} />
-                            <Text size="xs">Topic ID: {room.topicId}</Text>
+                            <Text size="xs">Topic: {room.topicName}</Text>
                         </Group>
                     </Stack>
                 </Box>
