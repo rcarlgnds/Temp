@@ -6,7 +6,7 @@ import {
     ModifyPlayerInRoomPayload,
     UpdateRoomStatusPayload,
     RoomLeaderboard,
-    RoomStatus, DeleteRoomPayload, GetAllRoomsApiItem
+    RoomStatus, DeleteRoomPayload, GetAllRoomsApiItem, UpdateRoomHostPayload
 } from './types';
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api/rooms`;
@@ -55,6 +55,16 @@ export const addPlayerToRoom = async (payload: ModifyPlayerInRoomPayload): Promi
     } catch (error) {
         console.error("Failed to add player to room:", error);
         throw new Error("Could not add player to room.");
+    }
+};
+
+export const updateRoomHost = async (payload: UpdateRoomHostPayload): Promise<any> => {
+    try {
+        const response = await axios.post(`${API_URL}/update-room-host`, payload);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to update room host:", error);
+        throw new Error("Could not update room host.");
     }
 };
 

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Paper, Stack, Avatar, Text, Badge, Box, MantineTheme, useMantineColorScheme, Tooltip, Chip } from "@mantine/core";
+import { Paper, Stack, Avatar, Text, Badge, Box, MantineTheme, useMantineColorScheme, Menu, ActionIcon, Tooltip, Chip } from "@mantine/core";
 import {
     IconUser, IconShield, IconAxe, IconWand,
-    IconMask, IconSword, IconCrown, IconCopy, IconCheck
+    IconMask, IconSword, IconCrown, IconCopy, IconCheck,
+    IconDotsVertical, IconUserStar
 } from '@tabler/icons-react';
 import { ApiPlayer } from "@/services/player/types";
 
@@ -27,9 +28,11 @@ const skinColors: { [key: string]: string } = {
 interface PlayerSlotProps {
     player: ApiPlayer | null;
     isHost: boolean;
+    isCurrentUserTheHost: boolean;
+    onTransferHost: () => void;
 }
 
-export function PlayerSlot({ player, isHost }: PlayerSlotProps) {
+export function PlayerSlot({ player, isHost, isCurrentUserTheHost, onTransferHost }: PlayerSlotProps) {
     const { colorScheme } = useMantineColorScheme();
     const [isHovered, setIsHovered] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
@@ -59,6 +62,7 @@ export function PlayerSlot({ player, isHost }: PlayerSlotProps) {
     const playerColor = skinColors[player.skin || ''] || 'gray';
 
     const paperStyle = (theme: MantineTheme): React.CSSProperties => ({
+        position: 'relative',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'space-between', padding: theme.spacing.md,
         height: '100%', minHeight: 240,
@@ -76,6 +80,25 @@ export function PlayerSlot({ player, isHost }: PlayerSlotProps) {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
+            {isCurrentUserTheHost && !isHost && (
+                <Menu shadow="md" width={200} position="bottom-end" withArrow>
+                    <Menu.Target>
+                        <ActionIcon variant="subtle" color="gray" style={{ position: 'absolute', top: 12, right: 12, zIndex: 2 }}>
+                            <IconDotsVertical size={20} />
+                        </ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                        <Menu.Label>Host Actions</Menu.Label>
+                        <Menu.Item
+                            leftSection={<IconUserStar size={14} />}
+                            onClick={(e) => { e.stopPropagation(); onTransferHost(); }}
+                        >
+                            Make Host
+                        </Menu.Item>
+                    </Menu.Dropdown>
+                </Menu>
+            )}
+
             <Box style={{ position: 'relative', width: 90, height: 90 }} mt="sm">
                 <Avatar size={90} radius="50%" color={playerColor}>
                     <PlayerIcon size="3.5rem" />

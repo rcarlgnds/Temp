@@ -17,6 +17,8 @@ import {
   Center,
   Loader,
   TextInput, Box,
+  Select,
+  NumberInput,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
@@ -30,7 +32,7 @@ import {
   createRoom,
   addPlayerToRoom,
   updateRoomStatus,
-  deleteRoom,
+  deleteRoom, updateRoomHost,
 } from "@/services/room";
 import {
   createPlayerSession,
@@ -45,6 +47,7 @@ import { Room } from "@/services/room/types";
 import { getUserByEmail } from "@/services/user";
 import Email from "next-auth/providers/email";
 import { useRouter } from 'next/navigation';
+import { getAllTopics } from "@/services/topic";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -53,14 +56,9 @@ export default function DashboardPage() {
 
   const [activeView, setActiveView] = useState("dashboard");
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [createOpened, { open: openCreate, close: closeCreate }] =
-      useDisclosure(false);
-  const [joinOpened, { open: openJoin, close: closeJoin }] =
-      useDisclosure(false);
-  const [
-    deleteModalOpened,
-    { open: openDeleteModal, close: closeDeleteModal },
-  ] = useDisclosure(false);
+  const [createOpened, { open: openCreate, close: closeCreate }] = useDisclosure(false);
+  const [joinOpened, { open: openJoin, close: closeJoin }] = useDisclosure(false);
+  const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal },] = useDisclosure(false);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
   const [joinRoomId, setJoinRoomId] = useState("");
@@ -73,12 +71,27 @@ export default function DashboardPage() {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [lobbyWs, setLobbyWs] = useState<WebSocket | null>(null);
 
+
+  // BUAT CREATE ROOM
+  const [topics, setTopics] = useState<{ value: string; label: string }[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [classCode, setClassCode] = useState("");
+  const [roomCount, setRoomCount] = useState<number | string>(1);
+
+
   useEffect(() => {
     if (!session?.user.id) return;
+    connectLobby(session.user.id);
 
-    const wsUrl = `ws://localhost:6969/ws/lobby?userId=${session.user.id}`;
+    return () => {
+      lobbyWs?.readyState === WebSocket.OPEN && lobbyWs.close();
+    };
+  }, [session?.user.id]);
 
+  const connectLobby = (userId: string) => {
+    const wsUrl = `ws://localhost:6969/ws/lobby?userId=${userId}`;
     const socket = new WebSocket(wsUrl);
+
     socket.onopen = () => console.log("WebSocket connected");
     socket.onclose = () => console.log("WebSocket disconnected");
     socket.onerror = (error) => console.error("WebSocket error:", error);
@@ -86,9 +99,7 @@ export default function DashboardPage() {
     socket.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.message === "create room") {
-          await fetchAllRooms();
-        } else if (data.message === "delete room") {
+        if (data.message === "create room" || data.message === "delete room") {
           await fetchAllRooms();
         }
       } catch (err) {
@@ -97,13 +108,7 @@ export default function DashboardPage() {
     };
 
     setLobbyWs(socket);
-
-    return () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
-    };
-  }, [session?.user.id]);
+  };
 
   const fetchAllRooms = async () => {
     try {
@@ -128,7 +133,7 @@ export default function DashboardPage() {
 
       setRooms(roomsWithSessionData);
     } catch (error) {
-      console.error(error);
+      // console.error(error);
     } finally {
       setLoadingRooms(false);
     }
@@ -139,6 +144,20 @@ export default function DashboardPage() {
       fetchAllRooms();
     }
   }, [status]);
+
+  useEffect(() => {
+    if (createOpened) {
+      const fetchTopics = async () => {
+        try {
+          const fetchedTopics = await getAllTopics();
+          setTopics(fetchedTopics.map(t => ({ value: t.topicId, label: t.topicName })));
+        } catch (error) {
+          console.error("Failed to fetch topics for modal");
+        }
+      };
+      fetchTopics();
+    }
+  }, [createOpened]);
 
   if (status === "loading") {
     return (
@@ -178,37 +197,41 @@ export default function DashboardPage() {
   };
 
   const handleCreateRoom = async () => {
-    if (!session?.user?.email || !session.user.name) return;
-
+    if (!session?.user?.email || !session.user.name || !selectedTopic || !classCode || !roomCount) return;
     setIsCreatingRoom(true);
     try {
       const userProfile = await getUserByEmail(session.user.email);
-      if (!userProfile || !userProfile.playerId) {
-        throw new Error("Could not retrieve user profile from backend.");
-      }
-      const hostId = userProfile.playerId;
-      const newRoomName = `${session.user.name}'s Room`;
+      if (!userProfile?.playerId) throw new Error("Could not retrieve user profile.");
 
-      const payload = {
-        Room: {
-          RoomId: newRoomName,
-          HostId: hostId,
-          TopicId: "aca50f4d-182f-4f2f-a5bd-7aa95f3b731b",
-        },
-        Email: session.user.email,
-      };
+      const finalClassCode = `${userProfile.username}_${classCode}`;
+      let lastPayload = null;
+
+      for (let i = 0; i < Number(roomCount); i++) {
+        const payload = {
+          Room: {
+            HostId: userProfile.playerId,
+            TopicId: selectedTopic,
+            ClassCode: finalClassCode,
+          },
+          Email: session.user.email,
+        };
+        await createRoom(payload);
+        lastPayload = payload;
+      }
 
       if (lobbyWs && lobbyWs.readyState === WebSocket.OPEN) {
         lobbyWs.send(
             JSON.stringify({
               eventType: "create-lobby",
-              payload: payload,
+              payload: lastPayload,
             })
         );
       }
 
-      //   await createRoom(payload);
       closeCreate();
+      setSelectedTopic(null);
+      setClassCode("");
+      setRoomCount(1);
       await fetchAllRooms();
     } catch (error) {
       console.error("Error during room creation:", error);
@@ -237,6 +260,8 @@ export default function DashboardPage() {
   };
 
   const handleViewRoom = async (roomId: string) => {
+    lobbyWs?.close();
+
     const baseRoomData = rooms.find((room) => room.id === roomId);
     if (!baseRoomData) return;
 
@@ -262,6 +287,15 @@ export default function DashboardPage() {
       setActiveView("lobby");
     } catch (error) {
       console.error(`Failed to view room ${roomId}:`, error);
+    }
+  };
+
+  const handleTransferHost = async (newHostId: string) => {
+    if (!selectedRoom) return;
+    try {
+      await updateRoomHost({ RoomId: selectedRoom.id, HostId: newHostId });
+    } catch (error) {
+      console.error("Failed to transfer host:", error);
     }
   };
 
@@ -340,7 +374,13 @@ export default function DashboardPage() {
     }
   };
 
-  const handleBackToDashboard = () => {
+  const handleBackToDashboard = (ws?: WebSocket | null) => {
+    ws?.close();
+
+    if (session?.user.id) {
+      connectLobby(session.user.id);
+    }
+
     setSelectedRoom(null);
     setActiveView("dashboard");
   };
@@ -380,25 +420,41 @@ export default function DashboardPage() {
   return (
       <>
         <InteractiveBackground colorScheme={colorScheme} />
-        <Modal
-            opened={createOpened}
-            onClose={closeCreate}
-            title={<Text fw={700}>Create a New Room</Text>}
-            radius="lg"
-            centered
-        >
-          <Stack>
-            <Text mt="md">A new room will be created. Are you sure?</Text>
+        <Modal opened={createOpened} onClose={closeCreate} title={<Text fw={700}>Create New Room(s)</Text>} radius="lg" centered>
+          <Stack mt="md">
+            <Select
+                label="Select Topic"
+                placeholder="Choose a topic"
+                data={topics}
+                value={selectedTopic}
+                onChange={setSelectedTopic}
+                required
+            />
+            <TextInput
+                label="Class Code"
+                placeholder="Enter class code (ex: LA17)"
+                value={classCode}
+                onChange={(e) => setClassCode(e.currentTarget.value)}
+                disabled={!selectedTopic}
+                required
+            />
+            <NumberInput
+                label="Number of Rooms"
+                value={roomCount}
+                onChange={setRoomCount}
+                min={1}
+                max={10}
+                disabled={!classCode}
+                required
+            />
             <Button
-                fullWidth
-                mt="md"
-                radius="md"
-                variant="gradient"
+                fullWidth mt="md" radius="md" variant="gradient"
                 gradient={{ from: "#DAA520", to: "#3C2A21" }}
                 loading={isCreatingRoom}
                 onClick={handleCreateRoom}
+                disabled={!selectedTopic || !classCode || !roomCount}
             >
-              Confirm & Create
+              Create
             </Button>
           </Stack>
         </Modal>
@@ -539,6 +595,7 @@ export default function DashboardPage() {
                     onRefreshLobby={refreshLobbyData}
                     isJoining={isJoining}
                     setIsJoining={setIsJoining}
+                    onTransferHost={handleTransferHost}
                 />
             )}
           </AppShell.Main>

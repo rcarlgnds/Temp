@@ -8,11 +8,16 @@ export interface GetAllRoomsApiItem {
 
 export interface CreateRoomPayload {
     Room: {
-        RoomId: string;
         HostId: string;
         TopicId: string;
+        ClassCode: string;
     };
     Email: string;
+}
+
+export interface UpdateRoomHostPayload {
+    RoomId: string;
+    HostId: string;
 }
 
 export interface ModifyPlayerInRoomPayload {
@@ -59,3 +64,4 @@ export interface RoomLeaderboard {
 export interface RoomStatus {
     [key: string]: any;
 }
+

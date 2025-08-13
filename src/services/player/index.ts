@@ -68,34 +68,30 @@ export const updatePlayerStatus = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Failed to update player status:", error);
     throw new Error("Could not update player status.");
   }
 };
 
 export const getPlayerSessionsByRoomId = async (
-  roomId: string
+    roomId: string
 ): Promise<LobbyData> => {
   try {
     const response = await axios.get<LobbyApiResponse>(
-      `${API_URL}/get-player-session-by-roomId`,
-      {
-        params: { roomId },
-      }
+        `${API_URL}/get-player-session-by-roomId`,
+        {
+          params: { roomId },
+        }
     );
+
     return response.data.data;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
-      console.log(
-        `No sessions found for room ${roomId}, returning an empty lobby.`
-      );
       return {
         players: [],
         room: { roomId: roomId, hostId: "" },
         sessions: [],
       };
     }
-    console.error("Failed to get player sessions for room:", error);
     throw new Error("Could not fetch player sessions.");
   }
 };
