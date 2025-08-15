@@ -245,7 +245,7 @@ export default function DashboardPage() {
           },
           Email: session.user.email,
         };
-        await createRoom(payload);
+        // await createRoom(payload);
         lastPayload = payload;
       }
 
