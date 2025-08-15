@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 const azureADClientId = process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID;
 const azureADClientSecret = process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_SECRET;
 const azureADTenantId = process.env.NEXT_PUBLIC_AZURE_AD_TENANT_ID;
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
 
 if (!azureADClientId || !azureADClientSecret || !azureADTenantId) {
   throw new Error(
@@ -55,7 +56,7 @@ export const authOptions: AuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
         try {
-          const res = await fetch("http://localhost:6969/api/users/login", {
+          const res = await fetch(`${apiBaseUrl}/api/users/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -92,7 +93,7 @@ export const authOptions: AuthOptions = {
     async signIn({ user, account }) {
       if (account?.provider !== "credentials" && user.email) {
         try {
-          await fetch("http://localhost:6969/api/users/add-player", {
+          await fetch(`${apiBaseUrl}/api/users/add-player`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -113,7 +114,7 @@ export const authOptions: AuthOptions = {
         if (account.provider !== "credentials" && user.email) {
           try {
             const res = await fetch(
-              `http://localhost:6969/api/users/get-player-by-email?Email=${user.email}`
+              `${apiBaseUrl}/api/users/get-player-by-email?Email=${user.email}`
             );
             if (res.ok) {
               const internalUserData = await res.json();
