@@ -5,7 +5,7 @@ import { Paper, Stack, Avatar, Text, Badge, Box, MantineTheme, useMantineColorSc
 import {
     IconUser, IconShield, IconAxe, IconWand,
     IconMask, IconSword, IconCrown, IconCopy, IconCheck,
-    IconDotsVertical, IconUserStar
+    IconDotsVertical, IconUserStar, IconCircleCheck, IconCircleDashed
 } from '@tabler/icons-react';
 import { ApiPlayer } from "@/services/player/types";
 
@@ -30,9 +30,10 @@ interface PlayerSlotProps {
     isHost: boolean;
     isCurrentUserTheHost: boolean;
     onTransferHost: () => void;
+    currentUserId: string | undefined;
 }
 
-export function PlayerSlot({ player, isHost, isCurrentUserTheHost, onTransferHost }: PlayerSlotProps) {
+export function PlayerSlot({ player, isHost, isCurrentUserTheHost, onTransferHost, currentUserId }: PlayerSlotProps) {
     const { colorScheme } = useMantineColorScheme();
     const [isHovered, setIsHovered] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
@@ -50,6 +51,8 @@ export function PlayerSlot({ player, isHost, isCurrentUserTheHost, onTransferHos
             </Stack>
         );
     }
+
+    const isOwner = player?.playerId === currentUserId;
 
     const handleCodeCopy = () => {
         if (!player.playerCode) return;
@@ -119,19 +122,30 @@ export function PlayerSlot({ player, isHost, isCurrentUserTheHost, onTransferHos
                 <Text fz="lg" fw={700} lineClamp={1}>{player.username}</Text>
                 <Text c="dimmed" size="xs">{player.email}</Text>
 
-                {player.playerCode && (
-                    <Tooltip label={codeCopied ? "Copied!" : "Click to copy code"} withArrow>
-                        <Chip
-                            checked={codeCopied}
-                            onChange={handleCodeCopy}
+                {isOwner ? (
+                    <Tooltip label={codeCopied ? "Code Copied!" : "Click to copy your code"} withArrow>
+                        <Badge
                             variant="light"
                             color={codeCopied ? "teal" : "blue"}
-                            icon={codeCopied ? <IconCheck size={16} /> : <IconCopy size={16} />}
                             mt="sm"
+                            size="xl"
+                            leftSection={codeCopied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                            onClick={handleCodeCopy}
+                            style={{ cursor: 'pointer', userSelect: 'none' }}
                         >
-                            <Text fw={500}>{player.playerCode}</Text>
-                        </Chip>
+                            {player.playerCode || 'No Code'}
+                        </Badge>
                     </Tooltip>
+                ) : (
+                    <Badge
+                        variant="light"
+                        color={'green'}
+                        mt="sm"
+                        size="xl"
+                        leftSection={<IconCircleCheck size={14} />}
+                    >
+                        {'Ready'}
+                    </Badge>
                 )}
             </Stack>
         </Paper>

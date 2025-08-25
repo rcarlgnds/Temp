@@ -120,10 +120,10 @@ export const getRoomStatus = async (roomId: string): Promise<RoomStatus> => {
 
 export const updateRoomStatus = async (payload: UpdateRoomStatusPayload): Promise<any> => {
     try {
-        const response = await axios.post(`${API_URL}/update-room-status`, payload);
+        const response = await axios.post(`${API_URL}/update-web-status`, payload);
         return response.data;
     } catch (error) {
-        console.error("Failed to update room status:", error);
-        throw new Error("Could not update room status.");
+        console.error("Failed to update room web status:", error);
+        throw new Error("Could not update room web status.");
     }
 };

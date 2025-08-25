@@ -270,6 +270,7 @@ export function LobbyView({
                     onTransferHost={() =>
                       player && onTransferHost(player.playerId)
                     }
+                    currentUserId={session?.user?.id}
                   />
                 );
               })}
