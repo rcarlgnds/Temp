@@ -1,4 +1,5 @@
 import "@mantine/core/styles.css";
+import "@mantine/notifications/styles.css";
 import "../../global.css";
 
 import React from "react";
@@ -17,12 +18,12 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" suppressHydrationWarning={true}>
-            <head>
-                <ColorSchemeScript defaultColorScheme="dark" />
-            </head>
-            <body>
-                <Providers>{children}</Providers>
-            </body>
+        <head>
+            <ColorSchemeScript defaultColorScheme="dark" />
+        </head>
+        <body>
+        <Providers>{children}</Providers>
+        </body>
         </html>
     );
 }
