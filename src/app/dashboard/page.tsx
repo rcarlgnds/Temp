@@ -269,7 +269,26 @@ export default function DashboardPage() {
     }
   };
 
-  const handleStartGame = async (roomId: string) => {
+  // const handleStartGame = async (roomId: string) => {
+  //   try {
+  //     const lobbyData = await getPlayerSessionsByRoomId(roomId);
+  //     if (lobbyData && lobbyData.players) {
+  //       for (const player of lobbyData.players) {
+  //         await addPlayerToRoom({ RoomId: roomId, Email: player.email });
+  //       }
+  //     }
+  //     await updateRoomStatus({ RoomId: roomId, Status: "start" });
+  //
+  //     const updatedRooms = await getAllRooms();
+  //     setRooms(updatedRooms);
+  //     const startedRoom = updatedRooms.find((r) => r.id === roomId);
+  //     if (startedRoom) setSelectedRoom(startedRoom);
+  //   } catch (error) {
+  //     console.error("Failed to start game:", error);
+  //   }
+  // };
+
+  const handleStartGame = async (roomId: string, ws: WebSocket | null) => {
     try {
       const lobbyData = await getPlayerSessionsByRoomId(roomId);
       if (lobbyData && lobbyData.players) {
@@ -279,10 +298,35 @@ export default function DashboardPage() {
       }
       await updateRoomStatus({ RoomId: roomId, Status: "start" });
 
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          eventType: "start-game",
+          roomId: roomId,
+        }));
+      }
+
       const updatedRooms = await getAllRooms();
+      const startedRoomFromApi = updatedRooms.find((r) => r.id === roomId);
+
+      if (startedRoomFromApi && selectedRoom) {
+        const mergedPlayers = startedRoomFromApi.players.map(newPlayer => {
+          const existingPlayer = selectedRoom.players.find(p => p.playerId === newPlayer.playerId);
+
+          return {
+            ...newPlayer,
+            playerCode: existingPlayer?.playerCode || newPlayer.playerCode,
+          };
+        });
+
+        setSelectedRoom({
+          ...startedRoomFromApi,
+          players: mergedPlayers,
+          playersCount: mergedPlayers.length,
+        });
+      }
+
       setRooms(updatedRooms);
-      const startedRoom = updatedRooms.find((r) => r.id === roomId);
-      if (startedRoom) setSelectedRoom(startedRoom);
+
     } catch (error) {
       console.error("Failed to start game:", error);
     }
@@ -629,7 +673,7 @@ export default function DashboardPage() {
               onBack={handleBackToDashboard}
               onJoinGame={handleJoinGameInLobby}
               onLeaveRoom={handleLeaveRoom}
-              onStartGame={handleStartGame}
+              onStartGame={(roomId) => handleStartGame(roomId, lobbyWs)}
               onRefreshLobby={refreshLobbyData}
               isJoining={isJoining}
               setIsJoining={setIsJoining}

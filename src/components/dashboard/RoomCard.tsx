@@ -88,7 +88,7 @@ export function RoomCard({ room, onJoin, onDelete }: RoomCardProps) {
                     <Stack gap={4} mt="md">
                         <Group gap="xs" c="dimmed">
                             <IconUserCircle size={16} />
-                            <Text size="xs">Created by: {isHost ? "You" : room.hostId}</Text>
+                            <Text size="xs">Created by: {isHost ? "You" : room.hostName}</Text>
                         </Group>
                         <Group gap="xs" c="dimmed">
                             <IconFileDescription size={16} />

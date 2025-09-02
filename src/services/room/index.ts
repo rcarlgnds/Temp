@@ -23,6 +23,7 @@ export const getAllRooms = async (): Promise<Room[]> => {
             id: item.room.id,
             name: item.room.roomId,
             hostId: item.room.hostId,
+            hostName: item.room.hostName,
             topicId: item.room.topicId,
             status: item.room.status,
             maxPlayers: item.room.maxPlayers,

@@ -2,6 +2,7 @@ import { ApiPlayer } from '../player/types';
 
 export interface GetAllRoomsApiItem {
     room: ApiRoom;
+    hostName: string;
     topicName: string;
     topicDescription: string;
 }
@@ -38,6 +39,7 @@ export interface ApiRoom {
     id: string;
     roomId: string;
     hostId: string;
+    hostName: string;
     topicId: string;
     status: string;
     maxPlayers: number;
@@ -48,6 +50,7 @@ export interface Room {
     id: string;
     name: string;
     hostId: string;
+    hostName: string;
     topicId: string;
     status: string;
     maxPlayers: number;
